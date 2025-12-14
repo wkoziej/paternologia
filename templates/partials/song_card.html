@@ -1,0 +1,31 @@
+<div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
+    <div class="flex justify-between items-start">
+        <div>
+            <a href="/songs/{{ song.song.id }}"
+               class="text-lg font-semibold text-gray-800 hover:text-indigo-600">
+                {{ song.song.name }}
+            </a>
+            {% if song.song.notes %}
+            <p class="text-sm text-gray-500 mt-1">{{ song.song.notes }}</p>
+            {% endif %}
+        </div>
+        <a href="/songs/{{ song.song.id }}/edit"
+           class="text-indigo-600 hover:text-indigo-800 text-sm">Edytuj</a>
+    </div>
+
+    <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+        {% for device_id, settings in song.devices.items() %}
+        <span class="bg-gray-100 px-2 py-1 rounded">
+            {{ device_id }}:
+            {% if settings.preset is not none %}preset {{ settings.preset }}{% endif %}
+            {% if settings.pattern %}pattern {{ settings.pattern }}{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+
+    {% if song.pacer %}
+    <div class="mt-2 text-xs text-gray-400">
+        {{ song.pacer | length }} {{ 'przycisk' if song.pacer | length == 1 else 'przyciski' if song.pacer | length < 5 else 'przycisków' }} PACER
+    </div>
+    {% endif %}
+</div>

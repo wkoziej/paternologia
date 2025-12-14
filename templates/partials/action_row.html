@@ -1,0 +1,56 @@
+<div class="action-row flex gap-2 items-center flex-wrap">
+    <select name="button_{{ button_idx }}_action_{{ action_idx }}_device" required
+            class="border border-gray-300 rounded px-2 py-1 text-sm"
+            onchange="updateActionTypes(this, {{ button_idx }}, {{ action_idx }})">
+        <option value="">Urządzenie...</option>
+        {% for device in devices %}
+        <option value="{{ device.id }}" {% if action and action.device == device.id %}selected{% endif %}>
+            {{ device.name }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <select name="button_{{ button_idx }}_action_{{ action_idx }}_type" required
+            class="border border-gray-300 rounded px-2 py-1 text-sm action-type-select"
+            onchange="updateActionFields(this, {{ button_idx }}, {{ action_idx }})">
+        <option value="">Typ...</option>
+        {% if action %}
+            {% for device in devices %}
+                {% if device.id == action.device %}
+                    {% for atype in device.action_types %}
+                    <option value="{{ atype.value }}" {% if action.type.value == atype.value %}selected{% endif %}>
+                        {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' }}
+                    </option>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </select>
+
+    <div class="action-fields flex gap-2">
+        {% if action %}
+            {% if action.type.value == 'preset' %}
+            <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
+                   value="{{ action.value }}" placeholder="Preset #" required
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+                   value="{{ action.label or '' }}" placeholder="Label"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
+            {% elif action.type.value == 'pattern' %}
+            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
+                   value="{{ action.value }}" placeholder="Pattern" required
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+            {% elif action.type.value == 'cc' %}
+            <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_cc"
+                   value="{{ action.cc }}" placeholder="CC #" required
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+                   value="{{ action.label or '' }}" placeholder="Label"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <button type="button" onclick="this.closest('.action-row').remove()"
+            class="text-red-500 hover:text-red-700 text-sm">🗑️</button>
+</div>

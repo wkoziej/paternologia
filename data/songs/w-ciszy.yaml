@@ -1,0 +1,61 @@
+song:
+  id: w-ciszy
+  name: W ciszy
+  author: Wojtas
+  created: '2025-12-14'
+  notes: Tempo?
+devices:
+  boss:
+    preset: 1
+    preset_name: W ciszy
+    pattern: null
+  ms:
+    preset: null
+    preset_name: null
+    pattern: A0
+  freak:
+    preset: 51
+    preset_name: W ciszy Pad
+    pattern: null
+pacer:
+- name: Start
+  actions:
+  - device: boss
+    type: preset
+    value: 1
+    cc: null
+    label: W ciszy
+  - device: ms
+    type: pattern
+    value: A0
+    cc: null
+    label: null
+  - device: freak
+    type: preset
+    value: 51
+    cc: null
+    label: W ciszy
+  - device: boss
+    type: cc
+    value: null
+    cc: 1
+    label: Play/Rec
+- name: Verse
+  actions:
+  - device: ms
+    type: pattern
+    value: A1
+    cc: null
+    label: null
+  - device: boss
+    type: cc
+    value: null
+    cc: 1
+    label: Play/Rec
+- name: Kolejny
+  actions:
+  - device: boss
+    type: cc
+    value: null
+    cc: 2
+    label: '?'

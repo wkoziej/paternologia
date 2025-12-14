@@ -1,0 +1,17 @@
+devices:
+  - id: boss
+    name: Boss RC-600
+    description: Loop Station
+    action_types:
+      - preset
+      - cc
+  - id: ms
+    name: Elektron Model:Samples
+    description: Sampler/Sequencer
+    action_types:
+      - pattern
+  - id: freak
+    name: Arturia MicroFreak
+    description: Synthesizer
+    action_types:
+      - preset

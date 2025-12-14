@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Utwory - Paternologia{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Utwory</h1>
+    <a href="/songs/new"
+       class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Nowy utwór
+    </a>
+</div>
+
+{% if songs %}
+<div class="space-y-4">
+    {% for song in songs %}
+    {% include "partials/song_card.html" %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+    <p class="mb-4">Brak utworów. Dodaj pierwszy utwór!</p>
+    <a href="/songs/new"
+       class="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+        + Nowy utwór
+    </a>
+</div>
+{% endif %}
+{% endblock %}

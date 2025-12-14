@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}{{ song.song.name }} - Paternologia{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+        <a href="/" class="text-indigo-600 hover:text-indigo-800">&larr; Powrót</a>
+        <h1 class="text-2xl font-bold text-gray-800 uppercase">{{ song.song.name }}</h1>
+    </div>
+    <div class="flex gap-2">
+        <a href="/songs/{{ song.song.id }}/edit"
+           class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Edytuj
+        </a>
+        <button hx-delete="/songs/{{ song.song.id }}"
+                hx-confirm="Czy na pewno chcesz usunąć ten utwór?"
+                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+            Usuń
+        </button>
+    </div>
+</div>
+
+{% if song.song.notes %}
+<p class="text-gray-600 mb-6 italic">{{ song.song.notes }}</p>
+{% endif %}
+
+<!-- Initial Device Settings -->
+<section class="mb-8">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">USTAWIENIA POCZĄTKOWE</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {% for device in devices %}
+        {% set settings = song.devices.get(device.id) %}
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 device-{{ device.id }}">
+            <h3 class="font-bold text-gray-800 mb-2">{{ device.name }}</h3>
+            {% if settings %}
+                {% if settings.preset is not none %}
+                <p class="text-sm text-gray-600">
+                    Preset: <span class="font-mono">{{ settings.preset }}</span>
+                    {% if settings.preset_name %}
+                    <span class="text-gray-400">"{{ settings.preset_name }}"</span>
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% if settings.pattern %}
+                <p class="text-sm text-gray-600">
+                    Pattern: <span class="font-mono">{{ settings.pattern }}</span>
+                </p>
+                {% endif %}
+            {% else %}
+            <p class="text-sm text-gray-400 italic">Brak ustawień</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- PACER Buttons -->
+<section>
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">
+        PACER ({{ song.pacer | length }} {{ 'przycisk' if song.pacer | length == 1 else 'przyciski' if song.pacer | length < 5 else 'przycisków' }})
+    </h2>
+
+    {% if song.pacer %}
+    <div class="pacer-grid">
+        {% for button in song.pacer %}
+        {% set button_idx = loop.index %}
+        <div class="bg-white rounded-lg shadow overflow-hidden pacer-btn">
+            <div class="bg-indigo-600 text-white px-4 py-2 font-bold text-center">
+                #{{ button_idx }} {{ button.name }}
+            </div>
+            <div class="p-4 action-list space-y-2">
+                {% for action in button.actions %}
+                {% set device = devices_map.get(action.device) %}
+                <div class="flex items-center gap-2 text-gray-700 border-l-2 pl-2 device-{{ action.device }}">
+                    <span class="font-medium">{{ device.name if device else action.device }}:</span>
+                    {% if action.type.value == 'preset' %}
+                    <span>preset {{ action.value }}</span>
+                    {% elif action.type.value == 'pattern' %}
+                    <span>pattern {{ action.value }}</span>
+                    {% elif action.type.value == 'cc' %}
+                    <span>CC{{ action.cc }}</span>
+                    {% endif %}
+                    {% if action.label %}
+                    <span class="text-gray-400 text-xs">"{{ action.label }}"</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if not button.actions %}
+                <p class="text-gray-400 italic text-sm">Brak akcji</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        <p>Brak skonfigurowanych przycisków PACER</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
