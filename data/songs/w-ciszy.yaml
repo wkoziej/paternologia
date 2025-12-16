@@ -5,7 +5,7 @@ song:
   created: '2025-12-16'
   notes: Tempo?
 pacer:
-- name: Uruchomienie beatów oraz gotowości nagrywania
+- name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
   actions:
   - device: boss
     type: preset
@@ -16,7 +16,7 @@ pacer:
     type: pattern
     value: A01
     cc: null
-    label: Po malutku
+    label: Gramy melodię na MicroFreak
   - device: freak
     type: preset
     value: 65
