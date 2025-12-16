@@ -11,7 +11,6 @@ from paternologia.dependencies import get_storage, get_templates
 from paternologia.models import (
     Action,
     ActionType,
-    DeviceSettings,
     PacerButton,
     Song,
     SongMetadata,
@@ -158,21 +157,6 @@ def _build_song_from_form(
     devices = storage.get_devices()
     device_ids = [d.id for d in devices]
 
-    device_settings = {}
-    for device_id in device_ids:
-        preset = form_data.get(f"device_{device_id}_preset", "").strip()
-        preset_name = form_data.get(f"device_{device_id}_preset_name", "").strip()
-        pattern = form_data.get(f"device_{device_id}_pattern", "").strip()
-
-        settings = DeviceSettings(
-            preset=int(preset) if preset else None,
-            preset_name=preset_name or None,
-            pattern=pattern or None,
-        )
-
-        if settings.preset is not None or settings.pattern:
-            device_settings[device_id] = settings
-
     pacer_buttons = []
     button_idx = 0
 
@@ -232,7 +216,6 @@ def _build_song_from_form(
             created=date.today(),
             notes=song_notes,
         ),
-        devices=device_settings,
         pacer=pacer_buttons,
     )
 

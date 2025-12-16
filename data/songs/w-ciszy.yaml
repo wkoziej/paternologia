@@ -2,21 +2,8 @@ song:
   id: w-ciszy
   name: W ciszy
   author: Wojtas
-  created: '2025-12-14'
+  created: '2025-12-16'
   notes: Tempo?
-devices:
-  boss:
-    preset: 1
-    preset_name: W ciszy
-    pattern: null
-  ms:
-    preset: null
-    preset_name: null
-    pattern: A0
-  freak:
-    preset: 51
-    preset_name: W ciszy Pad
-    pattern: null
 pacer:
 - name: Start
   actions:
@@ -27,31 +14,36 @@ pacer:
     label: W ciszy
   - device: ms
     type: pattern
-    value: A0
+    value: A01
     cc: null
     label: null
   - device: freak
     type: preset
-    value: 51
+    value: 65
     cc: null
     label: W ciszy
   - device: boss
     type: cc
     value: null
     cc: 1
-    label: Play/Rec
+    label: Track 1 Rec/Play
 - name: Verse
   actions:
   - device: ms
     type: pattern
-    value: A1
+    value: A02
     cc: null
     label: null
   - device: boss
     type: cc
     value: null
+    cc: 2
+    label: In FX A
+  - device: boss
+    type: cc
+    value: null
     cc: 1
-    label: Play/Rec
+    label: Track 1 Rec/Play
 - name: Kolejny
   actions:
   - device: boss
@@ -59,3 +51,13 @@ pacer:
     value: null
     cc: 2
     label: '?'
+  - device: ms
+    type: pattern
+    value: ss
+    cc: null
+    label: null
+  - device: freak
+    type: preset
+    value: 2
+    cc: null
+    label: null

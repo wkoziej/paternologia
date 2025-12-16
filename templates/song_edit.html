@@ -56,44 +56,6 @@
         </div>
     </section>
 
-    <!-- Initial Device Settings -->
-    <section class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-lg font-semibold text-gray-700 mb-4">Ustawienia początkowe urządzeń</h2>
-        <div class="space-y-4">
-            {% for device in devices %}
-            {% set settings = song.devices.get(device.id) if song else None %}
-            <div class="border border-gray-200 rounded-lg p-4">
-                <h3 class="font-medium text-gray-800 mb-3">{{ device.name }}</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {% if 'preset' in device.action_types | map(attribute='value') | list %}
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Preset</label>
-                        <input type="number" name="device_{{ device.id }}_preset"
-                               value="{{ settings.preset if settings and settings.preset is not none else '' }}"
-                               class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Nazwa presetu</label>
-                        <input type="text" name="device_{{ device.id }}_preset_name"
-                               value="{{ settings.preset_name if settings and settings.preset_name else '' }}"
-                               class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                    {% endif %}
-                    {% if 'pattern' in device.action_types | map(attribute='value') | list %}
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Pattern</label>
-                        <input type="text" name="device_{{ device.id }}_pattern"
-                               value="{{ settings.pattern if settings and settings.pattern else '' }}"
-                               placeholder="np. A0"
-                               class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-
     <!-- PACER Buttons -->
     <section class="bg-white rounded-lg shadow p-6">
         <div class="flex justify-between items-center mb-4">

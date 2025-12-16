@@ -11,7 +11,6 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
-    DeviceSettings,
     PacerButton,
     Song,
     SongMetadata,
@@ -62,11 +61,6 @@ def sample_song():
             created=date(2024, 12, 14),
             notes="Ballada, tempo 72 BPM",
         ),
-        devices={
-            "boss": DeviceSettings(preset=1, preset_name="W ciszy"),
-            "ms": DeviceSettings(pattern="A0"),
-            "freak": DeviceSettings(preset=51, preset_name="W ciszy Pad"),
-        },
         pacer=[
             PacerButton(
                 name="Start",

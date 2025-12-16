@@ -52,14 +52,6 @@ class PacerButton(BaseModel):
     )
 
 
-class DeviceSettings(BaseModel):
-    """Initial device settings for a song."""
-
-    preset: int | None = Field(default=None, description="Preset number")
-    preset_name: str | None = Field(default=None, description="Preset display name")
-    pattern: str | None = Field(default=None, description="Pattern identifier")
-
-
 class SongMetadata(BaseModel):
     """Song metadata information."""
 
@@ -71,12 +63,9 @@ class SongMetadata(BaseModel):
 
 
 class Song(BaseModel):
-    """Complete song configuration with device settings and PACER buttons."""
+    """Complete song configuration with PACER buttons."""
 
     song: SongMetadata = Field(..., description="Song metadata")
-    devices: dict[str, DeviceSettings] = Field(
-        default_factory=dict, description="Initial device settings keyed by device ID"
-    )
     pacer: Annotated[list[PacerButton], Field(max_length=6)] = Field(
         default_factory=list, description="PACER button configurations (max 6)"
     )

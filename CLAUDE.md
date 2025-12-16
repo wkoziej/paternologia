@@ -41,7 +41,7 @@ YAML files (data/) → Storage layer → Pydantic models → FastAPI routers →
 - `Device` - MIDI device with supported action types (preset, pattern, cc)
 - `Action` - Single MIDI action with device, type, value, cc, label
 - `PacerButton` - Button with name and up to 6 actions
-- `Song` - Complete song with metadata, device settings, and PACER buttons
+- `Song` - Complete song with metadata and PACER buttons
 
 **Storage** (`src/paternologia/storage.py`):
 - YAML-based persistence in `data/devices.yaml` and `data/songs/*.yaml`
@@ -71,10 +71,6 @@ song:
   author: "Author"
   created: 2024-12-14
   notes: "Optional notes"
-devices:
-  boss:
-    preset: 1
-    preset_name: "Preset Name"
 pacer:
   - name: "Button Name"
     actions:

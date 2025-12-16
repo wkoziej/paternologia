@@ -119,11 +119,10 @@ class TestSongView:
 
     def test_view_song(self, client, sample_devices, test_storage):
         """View page shows song details."""
-        from paternologia.models import DeviceSettings, Song, SongMetadata
+        from paternologia.models import Song, SongMetadata
 
         song = Song(
             song=SongMetadata(id="test", name="Test Song", notes="Test notes"),
-            devices={"boss": DeviceSettings(preset=1)},
         )
         test_storage.save_song(song)
 

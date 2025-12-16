@@ -10,7 +10,6 @@ from paternologia.models import (
     Action,
     ActionType,
     Device,
-    DeviceSettings,
     DevicesConfig,
     PacerButton,
     Song,
@@ -147,27 +146,6 @@ class TestPacerButton:
         assert button.actions == []
 
 
-class TestDeviceSettings:
-    """Tests for DeviceSettings model."""
-
-    def test_preset_settings(self):
-        """Device settings with preset."""
-        settings = DeviceSettings(preset=1, preset_name="W ciszy")
-        assert settings.preset == 1
-        assert settings.preset_name == "W ciszy"
-
-    def test_pattern_settings(self):
-        """Device settings with pattern."""
-        settings = DeviceSettings(pattern="A0")
-        assert settings.pattern == "A0"
-
-    def test_empty_settings(self):
-        """Device settings can be empty."""
-        settings = DeviceSettings()
-        assert settings.preset is None
-        assert settings.pattern is None
-
-
 class TestSongMetadata:
     """Tests for SongMetadata model."""
 
@@ -200,7 +178,6 @@ class TestSong:
         """Song with minimal data."""
         song = Song(song=SongMetadata(id="test", name="Test"))
         assert song.song.id == "test"
-        assert song.devices == {}
         assert song.pacer == []
 
     def test_song_full(self):
@@ -212,10 +189,6 @@ class TestSong:
                 author="Wojtek",
                 created=date(2024, 12, 14),
             ),
-            devices={
-                "boss": DeviceSettings(preset=1, preset_name="W ciszy"),
-                "ms": DeviceSettings(pattern="A0"),
-            },
             pacer=[
                 PacerButton(
                     name="Start",
@@ -225,7 +198,6 @@ class TestSong:
                 ),
             ],
         )
-        assert len(song.devices) == 2
         assert len(song.pacer) == 1
 
     def test_song_max_six_pacer_buttons(self):
