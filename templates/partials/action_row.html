@@ -40,6 +40,9 @@
             <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
                    value="{{ action.value }}" placeholder="Pattern" required
                    class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
+                   value="{{ action.label or '' }}" placeholder="Label"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
             {% elif action.type.value == 'cc' %}
             <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_cc"
                    value="{{ action.cc }}" placeholder="CC #" required

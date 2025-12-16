@@ -200,6 +200,8 @@ document.addEventListener('DOMContentLoaded', function() {
             html = `
                 <input type="text" name="button_${buttonIdx}_action_${actionIdx}_value" placeholder="Pattern" required
                        class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+                <input type="text" name="button_${buttonIdx}_action_${actionIdx}_label" placeholder="Label"
+                       class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
             `;
         } else if (type === 'cc') {
             html = `
