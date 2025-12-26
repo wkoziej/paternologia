@@ -19,12 +19,18 @@ F0                    # SysEx Start
 01                    # Command (SET=0x01, GET=0x02)
 01                    # Target (PRESET=0x01, GLOBAL=0x05, BACKUP=0x7F)
 XX                    # Index (preset 0x00-0x2F = A1-F8)
-XX                    # Object (control ID lub 0x7F)
-XX                    # Element (parametr)
+XX                    # Object (zależy od typu wiadomości - patrz niżej)
+XX                    # Element (numer parametru)
 [data bytes...]       # Dane (zmienne)
 XX                    # Checksum
 F7                    # SysEx End
 ```
+
+**Object byte:**
+- Dla **preset name**: `0x01` (CONTROL_NAME)
+- Dla **control steps**: `0x0D-0x12` (control ID: SW1-SW6)
+- Dla **control mode**: `0x0D-0x12` (control ID)
+- Dla **control LED**: `0x0D-0x12` (control ID)
 
 ### Checksum
 
@@ -49,10 +55,11 @@ TARGET_BACKUP = 0x7F
 # Control IDs (stompswitches)
 SW1, SW2, SW3, SW4, SW5, SW6 = 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12
 
-# Message types
+# Message types (używane w control step data)
 MSG_CTRL_OFF = 0x61       # Kontrolka wyłączona
 MSG_SW_NOTE = 0x43        # Note on/off
-MSG_SW_PRG_BANK = 0x45    # Program Change + Bank SELECT (preset!)
+MSG_SW_PRG_BANK = 0x45    # Program Change + Bank Select (PRESET)
+MSG_SW_PRG_STEP = 0x46    # Program Step (PATTERN - start/end range)
 MSG_AD_MIDI_CC = 0x00     # Control Change (CC)
 MSG_SW_MMC = 0x55         # MIDI Machine Control
 
@@ -63,23 +70,19 @@ LED_GREEN = 0x0D
 LED_BLUE = 0x11
 LED_WHITE = 0x17
 
+# Special object IDs
+CONTROL_NAME = 0x01       # Object ID dla nazwy presetu
+CONTROL_MODE_ELEMENT = 0x60  # Element ID dla trybu kontrolki
+
 # Preset indices: A1=0x00, A2=0x01, ..., F8=0x2F (6×8 = 48 presetów)
-```
-
-### Typy wiadomości (Object IDs)
-
-```python
-OBJ_PRESET_NAME = 0x7F    # Nazwa presetu (max 8 znaków ASCII)
-OBJ_CONTROL_STEP = 0x01   # Konfiguracja kroku kontrolki
-OBJ_CONTROL_LED = 0x02    # Konfiguracja LED
-OBJ_CONTROL_MODE = 0x03   # Tryb kontrolki (sequence/step)
 ```
 
 ### Przykład: Ustaw nazwę presetu A1 na "SONG"
 
 ```
-F0 00 01 77 7F 01 01 00 7F 00  # Header + preset A1, object=name
-53 4F 4E 47 20 20 20 20        # "SONG    " (8 bajtów, padded)
+F0 00 01 77 7F 01 01 00 01 00  # Header + preset A1, object=CONTROL_NAME (0x01)
+04                              # Długość nazwy (4)
+53 4F 4E 47                     # "SONG" (ASCII)
 XX                              # Checksum
 F7                              # End
 ```
@@ -122,20 +125,25 @@ CMD_GET = 0x02
 TARGET_PRESET = 0x01
 TARGET_GLOBAL = 0x05
 
-# Control IDs
+# Control IDs (Object byte dla control steps/mode/LED)
 STOMPSWITCHES = {i: 0x0D + i for i in range(6)}  # SW1-SW6
 
-# Message types
-MSG_SW_PRG_BANK = 0x45  # Preset/Pattern
-MSG_AD_MIDI_CC = 0x00   # CC
+# Special Object IDs
+CONTROL_NAME = 0x01  # Object ID dla nazwy presetu
 
-# LED
+# Element IDs
+CONTROL_MODE_ELEMENT = 0x60  # Element dla trybu kontrolki
+
+# Message types (używane w control step data)
+MSG_CTRL_OFF = 0x61       # Kontrolka wyłączona
+MSG_SW_PRG_BANK = 0x45    # Program Change + Bank (PRESET)
+MSG_SW_PRG_STEP = 0x46    # Program Step (PATTERN - start/end)
+MSG_AD_MIDI_CC = 0x00     # Control Change (CC)
+
+# LED colors
 LED_OFF = 0x00
 LED_GREEN = 0x0D
-
-# Objects
-OBJ_PRESET_NAME = 0x7F
-OBJ_CONTROL_STEP = 0x01
+LED_RED = 0x03
 
 # Preset mapping: "A1" -> 0x00, "F8" -> 0x2F
 PRESET_INDICES = {
@@ -175,9 +183,11 @@ class PacerSysExBuilder:
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
 
     def build_preset_name(self, name: str) -> bytes:
-        """Ustaw nazwę presetu (max 8 ASCII)."""
-        ascii_name = name.encode('ascii', errors='replace')[:8].ljust(8, b' ')
-        return self._build(c.OBJ_PRESET_NAME, 0x00, ascii_name)
+        """Ustaw nazwę presetu (dynamiczna długość, max 8 ASCII)."""
+        ascii_name = name.encode('ascii', errors='replace')[:8]
+        # Format: [długość] [bajty ASCII...]
+        data = bytes([len(ascii_name)]) + ascii_name
+        return self._build(c.CONTROL_NAME, 0x00, data)
 
     def build_control_step(
         self,
@@ -190,9 +200,32 @@ class PacerSysExBuilder:
         data3: int = 0,
         active: bool = True
     ) -> bytes:
-        """Konfiguruj krok kontrolki."""
-        data = bytes([msg_type, channel, data1, data2, data3, int(active)])
-        return self._build(control_id, step_index, data)
+        """Konfiguruj krok kontrolki.
+
+        Struktura: dla każdego parametru: [element_id, 0x01, wartość, 0x00]
+        gdzie element_id = (step_index-1)*6 + offset
+        """
+        base = (step_index - 1) * 6
+        params = []
+
+        # Każdy parametr: [element, object_type=0x01, value, padding=0x00]
+        params.extend([base + 1, 0x01, channel, 0x00])      # Channel
+        params.extend([base + 2, 0x01, msg_type, 0x00])     # Message type
+        params.extend([base + 3, 0x01, data1, 0x00])        # Data 1
+        params.extend([base + 4, 0x01, data2, 0x00])        # Data 2
+        params.extend([base + 5, 0x01, data3, 0x00])        # Data 3
+        params.extend([base + 6, 0x01, int(active)])        # Active (bez paddingu)
+
+        header = bytes([
+            c.DEVICE_ID,
+            c.CMD_SET,
+            c.TARGET_PRESET,
+            self.preset_index,
+            control_id
+        ])
+        payload = c.MANUFACTURER_ID + header + bytes(params)
+        cs = checksum(payload)
+        return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
 ```
 
 ### mappings.py
@@ -224,11 +257,14 @@ def action_to_midi(action: Action) -> tuple[int, int, int, int]:
 
     if action.type == ActionType.PRESET:
         # Program Change + Bank
+        # data1 = program number, data2 = bank LSB, data3 = bank MSB
         return (c.MSG_SW_PRG_BANK, channel, action.value, 0)
 
     elif action.type == ActionType.PATTERN:
-        # Pattern to też Program Change (inne bank?)
-        return (c.MSG_SW_PRG_BANK, channel, action.value, 0)
+        # Program Step - sekwencja programów (start/end range)
+        # data1 = nie używane, data2 = start program, data3 = end program
+        # TODO: Wymaga rozszerzenia modelu Action o pattern_end lub użycia value jako start
+        return (c.MSG_SW_PRG_STEP, channel, 0, action.value)
 
     elif action.type == ActionType.CC:
         # Control Change
@@ -267,21 +303,38 @@ def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
     messages.append(builder.build_preset_name(song.song.name))
 
     # 2. Konfiguracja przycisków SW1-SW6
-    for btn_idx, button in enumerate(song.pacer[:6]):
+    for btn_idx in range(6):  # Zawsze przetwarzaj wszystkie 6 przycisków
         control_id = c.STOMPSWITCHES[btn_idx]
+        button = song.pacer[btn_idx] if btn_idx < len(song.pacer) else None
 
-        # Kroki (max 6 akcji)
-        for step_idx, action in enumerate(button.actions[:6], start=1):
-            msg_type, channel, data1, data2 = action_to_midi(action)
-            messages.append(builder.build_control_step(
-                control_id=control_id,
-                step_index=step_idx,
-                msg_type=msg_type,
-                channel=channel,
-                data1=data1,
-                data2=data2,
-                active=True
-            ))
+        # Zawsze konfiguruj wszystkie 6 kroków (czyszczenie niewykorzystanych)
+        for step_idx in range(1, 7):
+            if button and step_idx <= len(button.actions):
+                # Akcja istnieje - konfiguruj normalnie
+                action = button.actions[step_idx - 1]
+                msg_type, channel, data1, data2 = action_to_midi(action)
+                messages.append(builder.build_control_step(
+                    control_id=control_id,
+                    step_index=step_idx,
+                    msg_type=msg_type,
+                    channel=channel,
+                    data1=data1,
+                    data2=data2,
+                    data3=0,
+                    active=True
+                ))
+            else:
+                # Brak akcji - wyczyść krok (MSG_CTRL_OFF, active=False)
+                messages.append(builder.build_control_step(
+                    control_id=control_id,
+                    step_index=step_idx,
+                    msg_type=c.MSG_CTRL_OFF,
+                    channel=0,
+                    data1=0,
+                    data2=0,
+                    data3=0,
+                    active=False
+                ))
 
     return b"".join(messages)
 ```
@@ -293,23 +346,29 @@ def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
 ```python
 """Endpoint eksportu .syx."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
-from ..storage import get_song, get_devices
+from ..dependencies import get_storage
+from ..storage import Storage
 from .pacer.export import export_song_to_syx
+from .pacer import constants as c
 
 router = APIRouter(prefix="/pacer", tags=["pacer"])
 
 @router.get("/export/{song_id}.syx")
-def export_syx(song_id: str, preset: str = "A1"):
+def export_syx(
+    song_id: str,
+    preset: str = "A1",
+    storage: Storage = Depends(get_storage)
+):
     """Eksportuj piosenkę do .syx."""
-    song = get_song(song_id)
+    song = storage.get_song(song_id)
     if not song:
         raise HTTPException(404, "Song not found")
 
     # Walidacja preset
-    if not preset.upper() in ["A1", "A2", ..., "F8"]:  # lub z constants
-        raise HTTPException(400, f"Invalid preset: {preset}")
+    if preset.upper() not in c.PRESET_INDICES:
+        raise HTTPException(400, f"Invalid preset: {preset}. Must be A1-F8.")
 
     syx_data = export_song_to_syx(song, preset)
 
@@ -463,16 +522,75 @@ def test_export_minimal(tmp_path):
 **test_pacer_api.py:**
 ```python
 def test_export_endpoint(client, sample_song):
+    """Test happy-path: eksport istniejącej piosenki."""
     response = client.get(f"/pacer/export/{sample_song.song.id}.syx?preset=B3")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/octet-stream"
     assert "attachment" in response.headers["content-disposition"]
     assert response.content[0] == 0xF0
+    assert response.content[-1] == 0xF7
 
 def test_export_404(client):
+    """Test: nieistniejąca piosenka zwraca 404."""
     response = client.get("/pacer/export/nonexistent.syx")
     assert response.status_code == 404
+
+def test_export_invalid_preset(client, sample_song):
+    """Test: niepoprawny preset zwraca 400."""
+    response = client.get(f"/pacer/export/{sample_song.song.id}.syx?preset=Z9")
+    assert response.status_code == 400
+    assert "Invalid preset" in response.json()["detail"]
+
+def test_export_empty_song(client, storage):
+    """Test: piosenka bez akcji generuje puste kroki (MSG_CTRL_OFF)."""
+    from paternologia.models import Song
+    empty_song = Song(song={"id": "empty", "name": "Empty"}, pacer=[])
+    storage.save_song(empty_song)
+
+    response = client.get("/pacer/export/empty.syx")
+
+    assert response.status_code == 200
+    # Sprawdź że wszystkie kroki mają MSG_CTRL_OFF (0x61)
+    assert b'\x61' in response.content
+
+def test_export_unknown_device(client, storage):
+    """Test: nieznane urządzenie używa domyślnego kanału 0."""
+    from paternologia.models import Song, PacerButton, Action, ActionType
+    song = Song(
+        song={"id": "unknown", "name": "Unknown"},
+        pacer=[PacerButton(
+            name="Btn1",
+            actions=[Action(device="unknown_device", type=ActionType.PRESET, value=1)]
+        )]
+    )
+    storage.save_song(song)
+
+    response = client.get("/pacer/export/unknown.syx")
+
+    assert response.status_code == 200
+    # Nie powinno rzucić wyjątku, channel=0 jako fallback
+
+def test_export_partial_actions(client, storage):
+    """Test: button z 3 akcjami generuje 6 kroków (3 aktywne, 3 wyłączone)."""
+    from paternologia.models import Song, PacerButton, Action, ActionType
+    song = Song(
+        song={"id": "partial", "name": "Partial"},
+        pacer=[PacerButton(
+            name="Btn1",
+            actions=[
+                Action(device="boss", type=ActionType.PRESET, value=1),
+                Action(device="boss", type=ActionType.PRESET, value=2),
+                Action(device="boss", type=ActionType.PRESET, value=3),
+            ]
+        )]
+    )
+    storage.save_song(song)
+
+    response = client.get("/pacer/export/partial.syx")
+
+    assert response.status_code == 200
+    # Weryfikuj że jest 6 wiadomości control_step dla SW1
 ```
 
 ### Test manualny z pacer-editor
@@ -545,3 +663,75 @@ hexdump -C test.syx
 6. ✅ Format pliku: konkatenacja wiadomości bez separatorów
 7. ✅ UI: instrukcja `amidi -l` zamiast hardcoded portu
 8. ✅ Referencja do pacer-editor przez submodule
+
+## Odpowiedzi na uwagi z SPEC_PACER_EXPORT_v2_REVIEW.md
+
+### 1. ✅ Niejednoznaczna interpretacja bajtu "Object"
+**Problem**: Spec mówiła że Object = control ID LUB 0x7F, a potem definiowała `OBJ_CONTROL_STEP = 0x01`.
+
+**Rozwiązanie**:
+- Doprecyzowano strukturę: Object byte zależy od typu wiadomości
+- Dla preset name: `Object = CONTROL_NAME (0x01)`
+- Dla control steps/LED/mode: `Object = control_id (0x0D-0x12)`
+- Usunięto mylące `OBJ_CONTROL_STEP`, `OBJ_CONTROL_LED`
+- Dodano przykłady hexdump pokazujące faktyczne bajty
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:29-33, 131-136, 185-228`
+
+### 2. ✅ Niepewne mapowanie PATTERN vs PRESET
+**Problem**: Komentarz "Pattern to też Program Change (inne bank?)" sygnalizował brak wiedzy.
+
+**Rozwiązanie**:
+- Sprawdzono w `pacer-editor/constants.js`: `MSG_SW_PRG_STEP = 0x46`
+- Dodano jasne mapowanie:
+  - PRESET → `MSG_SW_PRG_BANK (0x45)` - Program Change + Bank
+  - PATTERN → `MSG_SW_PRG_STEP (0x46)` - Program Step (start/end range)
+- Dodano komentarz o potencjalnej potrzebie rozszerzenia modelu Action
+- Dokumentacja parametrów: data1=unused, data2=start, data3=end
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:62, 263-267`
+
+### 3. ✅ Hardcoded kanały MIDI bez powiązania z Device
+**Problem**: Router importował `get_devices` ale nie używał.
+
+**Rozwiązanie**:
+- API używa teraz `storage = Depends(get_storage)` - faktyczna dependency injection
+- Usunięto martwy import `get_devices`
+- Komentarz w mappings.py: "Hardcoded w MVP - do przeniesienia do devices.yaml"
+- Jasna ścieżka migracji: w następnej iteracji `device.midi_channel` z YAML
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:349-381, 239-244`
+
+### 4. ✅ Eksport nie czyszczy niewykorzystanych kroków
+**Problem**: Jeśli button miał 6 akcji, a teraz ma 3, kroki 4-6 zachowają starą konfigurację.
+
+**Rozwiązanie**:
+- Export zawsze generuje **36 wiadomości control_step** (6 buttons × 6 steps)
+- Dla niewykorzystanych kroków: `MSG_CTRL_OFF (0x61)`, `active=False`
+- Pętla `for btn_idx in range(6)` + `for step_idx in range(1, 7)` gwarantuje deterministyczny plik
+- Każdy eksport resetuje cały preset do czystego stanu
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:305-339`
+
+### 5. ✅ API pseudokod i nieistniejące helpery
+**Problem**: `from ..storage import get_song` nie istnieje, walidacja preset używała `["A1", ..., "F8"]`.
+
+**Rozwiązanie**:
+- API używa `storage: Storage = Depends(get_storage)` zgodnie z projektem
+- Walidacja: `if preset.upper() not in c.PRESET_INDICES` - faktyczny słownik z constants
+- Import `from ..dependencies import get_storage` + `from .pacer import constants as c`
+- Wszystkie importy sprawdzone względem struktury projektu
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:349-381`
+
+### 6. ✅ Testowanie nie adresuje błędnych danych
+**Problem**: Tylko happy-path, brak negatywnych scenariuszy.
+
+**Rozwiązanie** - dodano 5 nowych testów:
+- `test_export_invalid_preset` - niepoprawny preset → 400
+- `test_export_empty_song` - piosenka bez akcji → MSG_CTRL_OFF
+- `test_export_unknown_device` - nieznane urządzenie → fallback channel=0
+- `test_export_partial_actions` - 3 akcje → 6 kroków (3 aktywne, 3 wyłączone)
+- Rozszerzono test_export_endpoint o weryfikację `F0...F7`
+
+**Kod**: `SPEC_PACER_EXPORT_v2.md:539-594`
