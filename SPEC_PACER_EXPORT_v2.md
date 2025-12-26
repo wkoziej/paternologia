@@ -117,6 +117,111 @@ F7
 
 ## Moduł pacer/
 
+### Modele danych
+
+**Rozszerzenie Device** (src/paternologia/models.py):
+```python
+class Device(BaseModel):
+    """MIDI device definition with supported action types."""
+
+    id: str = Field(..., description="Unique device identifier")
+    name: str = Field(..., description="Display name of the device")
+    description: str = Field(default="", description="Device description")
+    action_types: list[ActionType] = Field(
+        default_factory=list,
+        description="Supported action types"
+    )
+    midi_channel: int = Field(
+        ...,
+        ge=0,
+        le=15,
+        description="MIDI channel (0-15) for this device"
+    )
+```
+
+**Rozszerzenie Action** (src/paternologia/models.py):
+```python
+class Action(BaseModel):
+    """Single MIDI action definition."""
+
+    device: str
+    type: ActionType
+    value: int | str | None = None
+    cc: int | None = None
+    label: str | None = None
+    bank_lsb: int = Field(
+        default=0,
+        ge=0,
+        le=127,
+        description="Bank LSB (CC 32) for PRESET type"
+    )
+    bank_msb: int = Field(
+        default=0,
+        ge=0,
+        le=127,
+        description="Bank MSB (CC 0) for PRESET type"
+    )
+
+    @model_validator(mode='after')
+    def validate_cc_value(self) -> 'Action':
+        """Wymaga value dla ActionType.CC."""
+        if self.type == ActionType.CC and self.value is None:
+            raise ValueError("ActionType.CC wymaga pola 'value' (0-127)")
+        if self.type == ActionType.CC and (self.value < 0 or self.value > 127):
+            raise ValueError(f"ActionType.CC value musi być 0-127, otrzymano: {self.value}")
+        return self
+```
+
+**Format data/devices.yaml**:
+```yaml
+- id: boss
+  name: Boss RC-505 mkII
+  description: Loop station
+  midi_channel: 0
+  action_types:
+    - preset
+    - cc
+
+- id: ms
+  name: Elektron Model:Samples
+  description: Sample player
+  midi_channel: 1
+  action_types:
+    - preset
+    - pattern
+
+- id: freak
+  name: Moog Moogerfooger MF-104M
+  description: Analog delay
+  midi_channel: 2
+  action_types:
+    - cc
+```
+
+**Format data/songs/*.yaml** (rozszerzenie Action):
+```yaml
+pacer:
+  - name: Intro
+    actions:
+      - device: boss
+        type: preset
+        value: 5
+        bank_lsb: 0
+        bank_msb: 1  # Preset z banku 1
+        label: "Heavy Loop"
+      - device: ms
+        type: pattern
+        value: A02
+        label: "Drums"
+  - name: Verse
+    actions:
+      - device: boss
+        type: cc
+        cc: 1
+        value: 127  # WYMAGANE dla CC (nie może być null)
+        label: "Track 1 Rec/Play"
+```
+
 ### Struktura plików
 
 ```
@@ -255,23 +360,14 @@ class PacerSysExBuilder:
 from ..models import Action, ActionType, Device
 from . import constants as c
 
-# Fallback dla urządzeń bez midi_channel
-DEFAULT_DEVICE_CHANNELS = {
-    "boss": 0,
-    "ms": 1,
-    "freak": 2,
-}
-
 def build_device_channel_map(devices: list[Device]) -> dict[str, int]:
     """Buduj mapę device_id → MIDI channel z listy urządzeń.
 
-    Używa Device.midi_channel jeśli dostępne, w przeciwnym razie fallback.
+    Używa Device.midi_channel z modelu.
     """
     channel_map = {}
     for device in devices:
-        # TODO: Gdy Device będzie miał pole midi_channel, użyj device.midi_channel
-        # Na razie fallback do DEFAULT_DEVICE_CHANNELS
-        channel_map[device.id] = DEFAULT_DEVICE_CHANNELS.get(device.id, 0)
+        channel_map[device.id] = device.midi_channel
     return channel_map
 
 def get_device_channel(device_id: str, channel_map: dict[str, int]) -> int:
@@ -311,7 +407,13 @@ def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[
     if action.type == ActionType.PRESET:
         # Program Change + Bank
         # data1 = program number, data2 = bank LSB, data3 = bank MSB
-        return (c.MSG_SW_PRG_BANK, channel, action.value, 0, 0)
+        return (
+            c.MSG_SW_PRG_BANK,
+            channel,
+            action.value,
+            action.bank_lsb,
+            action.bank_msb
+        )
 
     elif action.type == ActionType.PATTERN:
         # Pattern na Model:Samples = Program Change (jak preset)
@@ -322,9 +424,8 @@ def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[
 
     elif action.type == ActionType.CC:
         # Control Change
-        # Domyślna wartość CC = 64 (środek zakresu 0-127) jeśli nie podano
-        value = action.value if action.value is not None else 64
-        return (c.MSG_AD_MIDI_CC, channel, action.cc or 0, value, 0)
+        # action.value jest wymagane (walidowane przez model)
+        return (c.MSG_AD_MIDI_CC, channel, action.cc or 0, action.value, 0)
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")
@@ -798,206 +899,18 @@ hexdump -C test.syx
 - Pattern ID "A01" → PC 0, "F16" → PC 95
 - MSG_SW_PRG_STEP (sekwencja) NIE jest używany
 
-**Devices przekazywane dynamicznie**:
-- Eliminuje drift między devices.yaml a hardcoded mapą
-- Przygotowuje grunt pod Device.midi_channel w przyszłości
-- Fallback do DEFAULT_DEVICE_CHANNELS jeśli brak midi_channel
+**Device.midi_channel**:
+- Każde urządzenie ma przypisany MIDI channel w data/devices.yaml
+- Eliminuje hardcoded mapowanie, całość konfiguracyjna
 
-## Ograniczenia MVP
+**Bank MSB/LSB dla PRESET**:
+- Action ma pola bank_lsb i bank_msb (default=0)
+- Umożliwia dostęp do presetów z różnych banków
+- Backward compatibility przez defaulty
 
-**1. Brak pola Device.midi_channel**
-- Model `Device` (src/paternologia/models.py:19-27) nie posiada pola `midi_channel`
-- Mapowanie używa hardcoded `DEFAULT_DEVICE_CHANNELS` jako fallback:
-  ```python
-  DEFAULT_DEVICE_CHANNELS = {
-      "boss": 0,
-      "ms": 1,
-      "freak": 2,
-  }
-  ```
-- **Konsekwencje**: Urządzenia spoza tej listy będą zawsze na kanale 0
-- **Rozwiązanie przyszłe**: Dodać pole `midi_channel: int` do modelu Device i devices.yaml
-- **TODO**: `SPEC_PACER_EXPORT_v2.md:257-259` - "Gdy Device będzie miał pole midi_channel, użyj device.midi_channel"
-
-**2. Brak obsługi bank MSB/LSB dla PRESET**
-- `action_to_midi` zwraca `data2=0, data3=0` (bank LSB=0, bank MSB=0)
-- **Konsekwencje**: Dostępne tylko presety z banku 0
-- **Rozwiązanie przyszłe**: Rozszerzyć model Action o pola `bank_lsb` i `bank_msb`
-
-**3. CC value = None domyślnie 64**
-- Jeśli `action.value` jest `None`, używana jest wartość 64 (środek zakresu 0-127)
-- **Konsekwencje**: Może nie odpowiadać intencji użytkownika (np. dla toggle CC lepsze byłoby 0 lub 127)
-- **Rozwiązanie przyszłe**: Walidacja na poziomie modelu wymuszająca `value` dla ActionType.CC
-
-## Przyszłe rozszerzenia
-
-### Rozszerzenie #1: Device.midi_channel
-
-**Cel**: Eliminacja ograniczenia MVP #1 - umożliwienie konfiguracji MIDI channel per device.
-
-**Zmiany w modelu Device** (src/paternologia/models.py):
-```python
-class Device(BaseModel):
-    """MIDI device definition with supported action types."""
-
-    id: str = Field(..., description="Unique device identifier")
-    name: str = Field(..., description="Display name of the device")
-    description: str = Field(default="", description="Device description")
-    action_types: list[ActionType] = Field(
-        default_factory=list, description="Supported action types"
-    )
-    midi_channel: int = Field(
-        default=0,
-        ge=0,
-        le=15,
-        description="MIDI channel (0-15) for this device"
-    )
-```
-
-**Zmiany w devices.yaml**:
-```yaml
-- id: boss
-  name: Boss RC-505 mkII
-  description: Loop station
-  midi_channel: 0
-  action_types:
-    - preset
-    - cc
-
-- id: ms
-  name: Elektron Model:Samples
-  description: Sample player
-  midi_channel: 1
-  action_types:
-    - preset
-    - pattern
-
-- id: freak
-  name: Moog Moogerfooger MF-104M
-  description: Analog delay
-  midi_channel: 2
-  action_types:
-    - cc
-```
-
-**Zmiany w pacer/mappings.py**:
-```python
-def build_device_channel_map(devices: list[Device]) -> dict[str, int]:
-    """Buduj mapę device_id → MIDI channel z listy urządzeń.
-
-    Używa Device.midi_channel, fallback do DEFAULT_DEVICE_CHANNELS dla backward compatibility.
-    """
-    channel_map = {}
-    for device in devices:
-        # Użyj device.midi_channel jeśli dostępne (model rozszerzony)
-        if hasattr(device, 'midi_channel'):
-            channel_map[device.id] = device.midi_channel
-        else:
-            # Fallback dla starych devices.yaml bez midi_channel
-            channel_map[device.id] = DEFAULT_DEVICE_CHANNELS.get(device.id, 0)
-    return channel_map
-```
-
-**Backward compatibility**:
-- Model ma `midi_channel: int = Field(default=0)` - stare devices.yaml będą działać z kanałem 0
-- `build_device_channel_map` sprawdza `hasattr(device, 'midi_channel')` dla bezpieczeństwa
-- `DEFAULT_DEVICE_CHANNELS` pozostaje jako ultima ratio fallback
-
-**Migracja**:
-1. Zaktualizować model Device w models.py
-2. Zaktualizować data/devices.yaml dodając `midi_channel` do każdego urządzenia
-3. Zaktualizować `build_device_channel_map` usuwając TODO i używając `device.midi_channel`
-4. Usunąć `DEFAULT_DEVICE_CHANNELS` po pełnej migracji (opcjonalne)
-
-**Testy**:
-```python
-def test_device_channel_from_model():
-    """Test mapowania z Device.midi_channel."""
-    devices = [
-        Device(id="boss", name="Boss", midi_channel=3),
-        Device(id="ms", name="M:S", midi_channel=7)
-    ]
-    channel_map = build_device_channel_map(devices)
-    assert channel_map["boss"] == 3
-    assert channel_map["ms"] == 7
-
-def test_device_channel_backward_compat():
-    """Test fallback gdy Device nie ma midi_channel."""
-    # Symulacja starego modelu bez midi_channel
-    device_dict = {"id": "boss", "name": "Boss"}
-    device = Device(**device_dict)
-    channel_map = build_device_channel_map([device])
-    assert channel_map["boss"] == 0  # Fallback do DEFAULT_DEVICE_CHANNELS["boss"]
-```
-
-### Rozszerzenie #2: Bank MSB/LSB dla PRESET
-
-**Cel**: Eliminacja ograniczenia MVP #2 - dostęp do presetów z banków innych niż 0.
-
-**Zmiany w modelu Action** (src/paternologia/models.py):
-```python
-class Action(BaseModel):
-    """Single MIDI action definition."""
-
-    device: str
-    type: ActionType
-    value: int | str | None = None
-    cc: int | None = None
-    label: str | None = None
-    bank_lsb: int = Field(default=0, ge=0, le=127, description="Bank LSB (CC 32)")
-    bank_msb: int = Field(default=0, ge=0, le=127, description="Bank MSB (CC 0)")
-```
-
-**Zmiany w songs/*.yaml**:
-```yaml
-- name: Intro
-  actions:
-  - device: boss
-    type: preset
-    value: 5
-    bank_lsb: 0
-    bank_msb: 1  # Bank MSB=1 → preset z banku 1
-    label: "Heavy Loop"
-```
-
-**Zmiany w pacer/mappings.py**:
-```python
-if action.type == ActionType.PRESET:
-    # Program Change + Bank
-    return (
-        c.MSG_SW_PRG_BANK,
-        channel,
-        action.value,              # data1 = program
-        action.bank_lsb,           # data2 = bank LSB
-        action.bank_msb            # data3 = bank MSB
-    )
-```
-
-**Backward compatibility**:
-- Pola mają defaulty `bank_lsb=0, bank_msb=0` - stare yaml będą działać bez zmian
-- Eksport pozostaje kompatybilny z Pacer
-
-### Rozszerzenie #3: Walidacja CC value
-
-**Cel**: Eliminacja ograniczenia MVP #3 - wymuszenie value dla ActionType.CC.
-
-**Zmiany w modelu Action** (model validator):
-```python
-class Action(BaseModel):
-    # ...existing fields...
-
-    @model_validator(mode='after')
-    def validate_cc_value(self) -> 'Action':
-        """Wymaga value dla ActionType.CC."""
-        if self.type == ActionType.CC and self.value is None:
-            raise ValueError("ActionType.CC wymaga pola 'value' (0-127)")
-        return self
-```
-
-**Konsekwencje**:
-- Istniejące songs/*.yaml z `value: null` dla CC będą niepoprawne
-- Wymaga migracji: ustawienie sensownych wartości dla wszystkich CC
-- UI musi wymuszać podanie wartości dla CC
+**Walidacja CC value**:
+- ActionType.CC wymaga niepustego pola value (0-127)
+- Pydantic model_validator wymusza to na poziomie modelu
 
 ## Review 3 (SPEC_PACER_EXPORT_v2_REVIEW_3.md)
 
@@ -1078,40 +991,38 @@ Wszystkie 6 uwag zostały zweryfikowane jako **ZASADNE**. Wprowadzono poprawki.
 **Problem**: `action.value` może być `None` (data/songs/w-ciszy.yaml:27), co spowoduje `TypeError` przy `bytes(params)`.
 
 **Rozwiązanie**:
-- Dodano domyślną wartość 64 (środek zakresu 0-127) dla CC gdy value=None
-- Udokumentowano w sekcji "Ograniczenia MVP" (#3)
-- **Kod**: `SPEC_PACER_EXPORT_v2.md:323-327`
+- Dodano Pydantic `@model_validator` wymuszający value dla ActionType.CC
+- action.value jest teraz wymagane (0-127) dla CC
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:165-172` (model Action), `320-323` (action_to_midi)
 
 ### 4. ✅ Deklarowany bank MSB nigdy nie wysyłany
 **Problem**: Komentarz wspominał data3=bank MSB, ale `action_to_midi` zwracało tylko 4 wartości.
 
 **Rozwiązanie**:
-- Rozszerzono `action_to_midi` do zwracania 5 wartości: `(msg_type, channel, data1, data2, data3)`
+- Dodano pola `bank_lsb` i `bank_msb` do modelu Action (default=0)
+- `action_to_midi` zwraca 5 wartości używając `action.bank_lsb` i `action.bank_msb` dla PRESET
 - Zaktualizowano wywołanie w `export_song_to_syx` do dekonstrukcji 5 wartości
-- Dla PRESET/PATTERN: data2=0 (bank LSB), data3=0 (bank MSB) jako default
-- Udokumentowano ograniczenie w sekcji "Ograniczenia MVP" (#2)
-- **Kod**: `SPEC_PACER_EXPORT_v2.md:295-330, 376-386`
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:152-163` (model Action), `302-311` (action_to_midi PRESET)
 
 ### 5. ✅ Mapowanie kanałów nie da się skonfigurować
 **Problem**: Model Device nie ma pola `midi_channel`, używany jest hardcoded fallback.
 
 **Rozwiązanie**:
-- Dodano sekcję "Ograniczenia MVP" (#1) dokumentującą to świadome ograniczenie
-- Wyjaśniono konsekwencje (urządzenia spoza DEFAULT_DEVICE_CHANNELS będą na kanale 0)
-- Zaplanowano przyszłe rozwiązanie (dodać pole `midi_channel` do Device)
-- **Kod**: `SPEC_PACER_EXPORT_v2.md:806-820`
+- Dodano pole `midi_channel: int` (0-15) do modelu Device
+- Zaktualizowano format data/devices.yaml z midi_channel per device
+- `build_device_channel_map` używa `device.midi_channel` bezpośrednio (bez fallback)
+- Usunięto `DEFAULT_DEVICE_CHANNELS` - całość konfiguracyjna
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:134-139` (model Device), `175-199` (devices.yaml), `258-266` (build_device_channel_map)
 
 ### 6. ✅ Otwarte TODO vs sekcja Review 3
 **Problem**: Review 3 twierdzi "wszystko zamknięte", ale TODO w kodzie (linia 257-259) wskazuje na ograniczenie.
 
 **Rozwiązanie**:
-- Utworzono sekcję "Ograniczenia MVP" (#1-3) dokumentującą świadome ograniczenia
-- Utworzono sekcję "Przyszłe rozszerzenia" (#1-3) z planem implementacji:
-  - **Rozszerzenie #1**: Device.midi_channel - model, yaml, mappings, testy, backward compatibility
-  - **Rozszerzenie #2**: Bank MSB/LSB dla PRESET - pola bank_lsb/bank_msb w Action
-  - **Rozszerzenie #3**: Walidacja CC value - model validator wymuszający value dla CC
-- TODO pozostaje w kodzie jako marker przyszłej implementacji
-- **Kod**: `SPEC_PACER_EXPORT_v2.md:806-1001` (Ograniczenia + Rozszerzenia)
-- **Status**: ✅ **TEMAT ZAMKNIĘTY** - ograniczenia są teraz transparentne i zaplanowane
+- Wszystkie "ograniczenia" są teraz częścią głównej specyfikacji MVP:
+  - Device.midi_channel - zaimplementowane w modelu (linia 134-139)
+  - Bank MSB/LSB - zaimplementowane w Action (linia 152-163)
+  - Walidacja CC value - zaimplementowane w model_validator (linia 165-172)
+- Usunięto TODO z kodu - `build_device_channel_map` używa `device.midi_channel` bezpośrednio
+- **Status**: ✅ **TEMAT ZAMKNIĘTY** - wszystko jest częścią głównej spec, nie "przyszłymi rozszerzeniami"
 
-**Podsumowanie Findings**: Wszystkie uwagi były trafne i wskazywały rzeczywiste problemy lub niejednoznaczności w spec. Wprowadzono poprawki, dodano sekcję "Ograniczenia MVP" dla przejrzystości oraz szczegółowy plan "Przyszłe rozszerzenia" eliminujący wszystkie ograniczenia.
+**Podsumowanie Findings**: Wszystkie uwagi były trafne. Elementy z "przyszłych rozszerzeń" przeniesiono do głównej specyfikacji - są to wymagania MVP, nie opcjonalne dodatki.
