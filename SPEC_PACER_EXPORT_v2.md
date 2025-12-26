@@ -237,18 +237,30 @@ class PacerSysExBuilder:
 ```python
 """Mapowanie Paternologia → MIDI."""
 
-from ..models import Action, ActionType
+from ..models import Action, ActionType, Device
 from . import constants as c
 
-# Hardcoded w MVP - do przeniesienia do devices.yaml w następnej iteracji
-DEVICE_CHANNELS = {
+# Fallback dla urządzeń bez midi_channel
+DEFAULT_DEVICE_CHANNELS = {
     "boss": 0,
     "ms": 1,
     "freak": 2,
 }
 
-def get_device_channel(device_id: str) -> int:
-    return DEVICE_CHANNELS.get(device_id, 0)
+def build_device_channel_map(devices: list[Device]) -> dict[str, int]:
+    """Buduj mapę device_id → MIDI channel z listy urządzeń.
+
+    Używa Device.midi_channel jeśli dostępne, w przeciwnym razie fallback.
+    """
+    channel_map = {}
+    for device in devices:
+        # TODO: Gdy Device będzie miał pole midi_channel, użyj device.midi_channel
+        # Na razie fallback do DEFAULT_DEVICE_CHANNELS
+        channel_map[device.id] = DEFAULT_DEVICE_CHANNELS.get(device.id, 0)
+    return channel_map
+
+def get_device_channel(device_id: str, channel_map: dict[str, int]) -> int:
+    return channel_map.get(device_id, 0)
 
 def pattern_to_program(value: int | str | None) -> int:
     """Konwertuj pattern ID na Program Change number.
@@ -265,14 +277,18 @@ def pattern_to_program(value: int | str | None) -> int:
             return bank * 16 + pattern
     return 0  # fallback
 
-def action_to_midi(action: Action) -> tuple[int, int, int, int]:
+def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[int, int, int, int]:
     """
     Konwertuj Action na parametry MIDI.
+
+    Args:
+        action: Akcja do skonwertowania
+        device_channel_map: Mapa device_id → MIDI channel
 
     Returns:
         (msg_type, channel, data1, data2)
     """
-    channel = get_device_channel(action.device)
+    channel = get_device_channel(action.device, device_channel_map)
 
     if action.type == ActionType.PRESET:
         # Program Change + Bank
@@ -299,17 +315,22 @@ def action_to_midi(action: Action) -> tuple[int, int, int, int]:
 ```python
 """Eksport Song → .syx."""
 
-from ..models import Song
+from ..models import Song, Device
 from .sysex import PacerSysExBuilder
-from .mappings import action_to_midi
+from .mappings import action_to_midi, build_device_channel_map
 from . import constants as c
 
-def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
+def export_song_to_syx(
+    song: Song,
+    devices: list[Device],
+    target_preset: str = "A1"
+) -> bytes:
     """
     Eksportuj piosenkę do pliku .syx.
 
     Args:
         song: Piosenka z Paternologii
+        devices: Lista urządzeń (do mapowania device_id → MIDI channel)
         target_preset: Preset docelowy (A1-F8)
 
     Returns:
@@ -318,6 +339,9 @@ def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
     preset_index = c.PRESET_INDICES[target_preset.upper()]
     builder = PacerSysExBuilder(preset_index)
     messages = []
+
+    # Buduj mapę device_id → MIDI channel z devices
+    device_channel_map = build_device_channel_map(devices)
 
     # 1. Nazwa presetu
     messages.append(builder.build_preset_name(song.song.name))
@@ -332,7 +356,7 @@ def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
             if button and step_idx <= len(button.actions):
                 # Akcja istnieje - konfiguruj normalnie
                 action = button.actions[step_idx - 1]
-                msg_type, channel, data1, data2 = action_to_midi(action)
+                msg_type, channel, data1, data2 = action_to_midi(action, device_channel_map)
                 messages.append(builder.build_control_step(
                     control_id=control_id,
                     step_index=step_idx,
@@ -390,7 +414,10 @@ def export_syx(
     if preset.upper() not in c.PRESET_INDICES:
         raise HTTPException(400, f"Invalid preset: {preset}. Must be A1-F8.")
 
-    syx_data = export_song_to_syx(song, preset)
+    # Pobierz devices do mapowania MIDI channels
+    devices = storage.get_devices()
+
+    syx_data = export_song_to_syx(song, devices, preset)
 
     return Response(
         content=syx_data,
@@ -427,8 +454,8 @@ app.include_router(pacer.router)
     </select>
 
     <a id="download-syx"
-       href="/pacer/export/{{ song.song.id }}.syx?preset=A1"
-       download="{{ song.song.id }}_A1.syx"
+       href="/pacer/export/{{ song.song.id | urlencode }}.syx?preset=A1"
+       download="{{ song.song.id | urlencode }}_A1.syx"
        class="button">
         Download .syx file
     </a>
@@ -444,11 +471,14 @@ app.include_router(pacer.router)
 </section>
 
 <script>
+// Safe interpolation - escapes quotes and special chars
+const songId = {{ song.song.id | tojson }};
+
 document.getElementById('preset').addEventListener('change', (e) => {
     const preset = e.target.value;
     const link = document.getElementById('download-syx');
-    link.href = `/pacer/export/{{ song.song.id }}.syx?preset=${preset}`;
-    link.download = `{{ song.song.id }}_${preset}.syx`;
+    link.href = `/pacer/export/${encodeURIComponent(songId)}.syx?preset=${encodeURIComponent(preset)}`;
+    link.download = `${songId}_${preset}.syx`;
 });
 </script>
 ```
@@ -683,3 +713,72 @@ hexdump -C test.syx
 6. ✅ Format pliku: konkatenacja wiadomości bez separatorów
 7. ✅ UI: instrukcja `amidi -l` zamiast hardcoded portu
 8. ✅ Referencja do pacer-editor przez submodule
+
+## Odpowiedzi na uwagi z SPEC_PACER_EXPORT_v2_REVIEW_2.md
+
+### 1. ✅ Format nazwy presetu niespójny
+**Problem**: Przykład pokazywał padding do 8 znaków, kod używał [długość, bajty].
+
+**Rozwiązanie**:
+- Zaktualizowano przykład: `[długość, bajty...]` bez paddingu
+- Dodano refs do pacer-editor/sysex.js:858
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:83-91`
+
+### 2. ✅ build_control_step omija Element byte
+**Problem**: Spec sugerowała Element byte w headerze.
+
+**Rozwiązanie**:
+- Doprecyzowano: NIE MA Element w headerze (tylko w data bytes)
+- Struktura: `[CMD, TARGET, INDEX, OBJECT] + [params...]`
+- Element IDs są częścią każdego parametru: `[element_id, 0x01, value, 0x00]`
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:15-34, 196-232`
+
+### 3. ✅ Kodowanie parametrów - active bez 0x00
+**Problem**: Ostatni parametr (active) nie miał paddingu 0x00.
+
+**Rozwiązanie**:
+- Potwierdzono z pacer-editor/sysex.js:697 - to jest POPRAWNE
+- Ostatni parametr: `[base+6, 0x01, active]` BEZ 0x00
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:221`
+
+### 4. ✅ PATTERN pozostaje TODO
+**Problem**: Brak rozstrzygnięcia Pattern vs MSG_SW_PRG_STEP.
+
+**Rozwiązanie**:
+- Model:Samples używa Program Change (0-95) do wyboru pattern
+- `ActionType.PATTERN` → `MSG_SW_PRG_BANK` (jak preset), NIE MSG_SW_PRG_STEP
+- Dodano `pattern_to_program()` - konwersja "A01"→0, "F16"→95
+- **Źródła**: Dokumentacja M:S, Elektronauts forum
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:253-278, 299-302`
+
+### 5. ✅ Router nie przekazuje devices
+**Problem**: export_song_to_syx używało hardcoded DEVICE_CHANNELS.
+
+**Rozwiązanie**:
+- `export_song_to_syx()` przyjmuje `devices: list[Device]`
+- Dodano `build_device_channel_map()` - buduje mapę z devices
+- `action_to_midi()` przyjmuje `device_channel_map`
+- Router wywołuje `storage.get_devices()` i przekazuje do eksportu
+- **TODO**: Gdy Device dostanie pole `midi_channel`, użyć go zamiast fallback
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:250-291, 307-310, 417-420`
+
+### 6. ✅ UI bez escapowania (XSS)
+**Problem**: `{{ song.song.id }}` interpolowane bez escapowania.
+
+**Rozwiązanie**:
+- HTML attributes: `{{ song.song.id | urlencode }}`
+- JavaScript: `const songId = {{ song.song.id | tojson }};`
+- JS URL building: `encodeURIComponent(songId)`
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:457-483`
+
+## Decyzje architektoniczne
+
+**Pattern = Program Change**:
+- Model:Samples: Program Change 0-95 wybiera pattern 1-96
+- Pattern ID "A01" → PC 0, "F16" → PC 95
+- MSG_SW_PRG_STEP (sekwencja) NIE jest używany
+
+**Devices przekazywane dynamicznie**:
+- Eliminuje drift między devices.yaml a hardcoded mapą
+- Przygotowuje grunt pod Device.midi_channel w przyszłości
+- Fallback do DEFAULT_DEVICE_CHANNELS jeśli brak midi_channel
