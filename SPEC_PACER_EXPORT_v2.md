@@ -12,26 +12,41 @@ Generator plików `.syx` (MIDI SysEx) dla Nektar Pacer:
 
 ### Struktura ramki
 
+Ramka SysEx ma **dwie warianty** w zależności od typu wiadomości:
+
+**Wariant A: Preset name** (zawiera bajt Element w headerze)
 ```
 F0                    # SysEx Start
 00 01 77              # Manufacturer ID (Nektar)
 7F                    # Device ID (broadcast)
 01                    # Command (SET=0x01, GET=0x02)
-01                    # Target (PRESET=0x01, GLOBAL=0x05, BACKUP=0x7F)
+01                    # Target (PRESET=0x01)
 XX                    # Index (preset 0x00-0x2F = A1-F8)
-XX                    # Object (zależy od typu wiadomości - patrz niżej)
-[data bytes...]       # Dane (zmienne, zawierają element IDs dla parametrów)
+01                    # Object (CONTROL_NAME = 0x01)
+00                    # Element (zawsze 0x00 dla preset name)
+[data bytes...]       # Długość + ASCII nazwa
 XX                    # Checksum
 F7                    # SysEx End
 ```
 
-**Object byte:**
-- Dla **preset name**: `0x01` (CONTROL_NAME)
-- Dla **control steps**: `0x0D-0x12` (control ID: SW1-SW6)
-- Dla **control mode**: `0x0D-0x12` (control ID)
-- Dla **control LED**: `0x0D-0x12` (control ID)
+**Wariant B: Control steps** (BEZ bajtu Element w headerze)
+```
+F0                    # SysEx Start
+00 01 77              # Manufacturer ID (Nektar)
+7F                    # Device ID (broadcast)
+01                    # Command (SET=0x01, GET=0x02)
+01                    # Target (PRESET=0x01)
+XX                    # Index (preset 0x00-0x2F = A1-F8)
+XX                    # Object (control ID: 0x0D-0x12 = SW1-SW6)
+[data bytes...]       # Parametry z element IDs: [elm_id, 0x01, value, 0x00]...
+XX                    # Checksum
+F7                    # SysEx End
+```
 
-**Uwaga**: NIE MA osobnego bajtu "Element" w headerze! Element IDs są częścią data bytes dla każdego parametru.
+**Kluczowa różnica**:
+- **Preset name**: Element (0x00) jest w headerze, przed data bytes
+- **Control steps**: Element IDs są **wewnątrz** data bytes dla każdego parametru
+- Źródło: `pacer-editor/sysex.js:847-853` (preset name) vs `685-697` (control step)
 
 ### Checksum
 
@@ -277,7 +292,7 @@ def pattern_to_program(value: int | str | None) -> int:
             return bank * 16 + pattern
     return 0  # fallback
 
-def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[int, int, int, int]:
+def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[int, int, int, int, int]:
     """
     Konwertuj Action na parametry MIDI.
 
@@ -286,25 +301,30 @@ def action_to_midi(action: Action, device_channel_map: dict[str, int]) -> tuple[
         device_channel_map: Mapa device_id → MIDI channel
 
     Returns:
-        (msg_type, channel, data1, data2)
+        (msg_type, channel, data1, data2, data3)
+
+    Dla MSG_SW_PRG_BANK: data1=program, data2=bank LSB, data3=bank MSB
+    Dla MSG_AD_MIDI_CC: data1=CC number, data2=value, data3=unused (0)
     """
     channel = get_device_channel(action.device, device_channel_map)
 
     if action.type == ActionType.PRESET:
         # Program Change + Bank
         # data1 = program number, data2 = bank LSB, data3 = bank MSB
-        return (c.MSG_SW_PRG_BANK, channel, action.value, 0)
+        return (c.MSG_SW_PRG_BANK, channel, action.value, 0, 0)
 
     elif action.type == ActionType.PATTERN:
         # Pattern na Model:Samples = Program Change (jak preset)
         # M:S używa PC 0-95 do wyboru pattern 1-96
         # Konwertuj "A01" → 0, "A02" → 1, etc. (lub int jeśli już number)
         program = pattern_to_program(action.value)
-        return (c.MSG_SW_PRG_BANK, channel, program, 0)
+        return (c.MSG_SW_PRG_BANK, channel, program, 0, 0)
 
     elif action.type == ActionType.CC:
         # Control Change
-        return (c.MSG_AD_MIDI_CC, channel, action.cc or 0, action.value)
+        # Domyślna wartość CC = 64 (środek zakresu 0-127) jeśli nie podano
+        value = action.value if action.value is not None else 64
+        return (c.MSG_AD_MIDI_CC, channel, action.cc or 0, value, 0)
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")
@@ -356,7 +376,7 @@ def export_song_to_syx(
             if button and step_idx <= len(button.actions):
                 # Akcja istnieje - konfiguruj normalnie
                 action = button.actions[step_idx - 1]
-                msg_type, channel, data1, data2 = action_to_midi(action, device_channel_map)
+                msg_type, channel, data1, data2, data3 = action_to_midi(action, device_channel_map)
                 messages.append(builder.build_control_step(
                     control_id=control_id,
                     step_index=step_idx,
@@ -364,7 +384,7 @@ def export_song_to_syx(
                     channel=channel,
                     data1=data1,
                     data2=data2,
-                    data3=0,
+                    data3=data3,
                     active=True
                 ))
             else:
@@ -394,8 +414,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
 from ..dependencies import get_storage
 from ..storage import Storage
-from .pacer.export import export_song_to_syx
-from .pacer import constants as c
+from ..pacer.export import export_song_to_syx
+from ..pacer import constants as c
 
 router = APIRouter(prefix="/pacer", tags=["pacer"])
 
@@ -783,6 +803,32 @@ hexdump -C test.syx
 - Przygotowuje grunt pod Device.midi_channel w przyszłości
 - Fallback do DEFAULT_DEVICE_CHANNELS jeśli brak midi_channel
 
+## Ograniczenia MVP
+
+**1. Brak pola Device.midi_channel**
+- Model `Device` (src/paternologia/models.py:19-27) nie posiada pola `midi_channel`
+- Mapowanie używa hardcoded `DEFAULT_DEVICE_CHANNELS` jako fallback:
+  ```python
+  DEFAULT_DEVICE_CHANNELS = {
+      "boss": 0,
+      "ms": 1,
+      "freak": 2,
+  }
+  ```
+- **Konsekwencje**: Urządzenia spoza tej listy będą zawsze na kanale 0
+- **Rozwiązanie przyszłe**: Dodać pole `midi_channel: int` do modelu Device i devices.yaml
+- **TODO**: `SPEC_PACER_EXPORT_v2.md:257-259` - "Gdy Device będzie miał pole midi_channel, użyj device.midi_channel"
+
+**2. Brak obsługi bank MSB/LSB dla PRESET**
+- `action_to_midi` zwraca `data2=0, data3=0` (bank LSB=0, bank MSB=0)
+- **Konsekwencje**: Dostępne tylko presety z banku 0
+- **Rozwiązanie przyszłe**: Rozszerzyć model Action o pola `bank_lsb` i `bank_msb`
+
+**3. CC value = None domyślnie 64**
+- Jeśli `action.value` jest `None`, używana jest wartość 64 (środek zakresu 0-127)
+- **Konsekwencje**: Może nie odpowiadać intencji użytkownika (np. dla toggle CC lepsze byłoby 0 lub 127)
+- **Rozwiązanie przyszłe**: Walidacja na poziomie modelu wymuszająca `value` dla ActionType.CC
+
 ## Review 3 (SPEC_PACER_EXPORT_v2_REVIEW_3.md)
 
 Wszystkie 5 uwag zostały zweryfikowane jako **nieprawdziwe** - spec jest poprawny.
@@ -836,3 +882,62 @@ Wszystkie 5 uwag zostały zweryfikowane jako **nieprawdziwe** - spec jest popraw
 - **Status**: Devices w pełni wykorzystywane. Review nieprawidłowy.
 
 **Podsumowanie Review 3**: Spec jest poprawny i gotowy do implementacji. Review powstał przez niepełne przeczytanie kodu i niezweryfikowanie twierdzeń z kodem źródłowym pacer-editor.
+
+## Review Findings (workspace/reviews/SPEC_PACER_EXPORT_v2_findings.md)
+
+Wszystkie 6 uwag zostały zweryfikowane jako **ZASADNE**. Wprowadzono poprawki.
+
+### 1. ✅ Sprzeczny opis Element w nagłówku
+**Problem**: Sekcja "Struktura ramki" mówiła że "NIE MA Element w headerze", ale preset_name go dodaje.
+
+**Rozwiązanie**:
+- Rozdzielono strukturę na dwa warianty:
+  - **Wariant A (Preset name)**: Header zawiera Element (0x00) przed data bytes
+  - **Wariant B (Control steps)**: Header NIE zawiera Element, element IDs są w data bytes
+- Wyjaśniono różnicę z referencją do pacer-editor/sysex.js
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:13-49`
+
+### 2. ✅ Niepoprawna ścieżka importu
+**Problem**: Router używał `from .pacer.export` zamiast `from ..pacer.export`.
+
+**Rozwiązanie**:
+- Poprawiono import path z `.pacer` na `..pacer` (z routers/ wyjdź do paternologia/, potem wejdź do pacer/)
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:412-413`
+
+### 3. ✅ Brak obsługi pustych wartości dla CC
+**Problem**: `action.value` może być `None` (data/songs/w-ciszy.yaml:27), co spowoduje `TypeError` przy `bytes(params)`.
+
+**Rozwiązanie**:
+- Dodano domyślną wartość 64 (środek zakresu 0-127) dla CC gdy value=None
+- Udokumentowano w sekcji "Ograniczenia MVP" (#3)
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:323-327`
+
+### 4. ✅ Deklarowany bank MSB nigdy nie wysyłany
+**Problem**: Komentarz wspominał data3=bank MSB, ale `action_to_midi` zwracało tylko 4 wartości.
+
+**Rozwiązanie**:
+- Rozszerzono `action_to_midi` do zwracania 5 wartości: `(msg_type, channel, data1, data2, data3)`
+- Zaktualizowano wywołanie w `export_song_to_syx` do dekonstrukcji 5 wartości
+- Dla PRESET/PATTERN: data2=0 (bank LSB), data3=0 (bank MSB) jako default
+- Udokumentowano ograniczenie w sekcji "Ograniczenia MVP" (#2)
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:295-330, 376-386`
+
+### 5. ✅ Mapowanie kanałów nie da się skonfigurować
+**Problem**: Model Device nie ma pola `midi_channel`, używany jest hardcoded fallback.
+
+**Rozwiązanie**:
+- Dodano sekcję "Ograniczenia MVP" (#1) dokumentującą to świadome ograniczenie
+- Wyjaśniono konsekwencje (urządzenia spoza DEFAULT_DEVICE_CHANNELS będą na kanale 0)
+- Zaplanowano przyszłe rozwiązanie (dodać pole `midi_channel` do Device)
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:806-820`
+
+### 6. ✅ Otwarte TODO vs sekcja Review 3
+**Problem**: Review 3 twierdzi "wszystko zamknięte", ale TODO w kodzie (linia 257-259) wskazuje na ograniczenie.
+
+**Rozwiązanie**:
+- Utworzono sekcję "Ograniczenia MVP" zamiast ukrywać TODO w kodzie
+- Wyjaśniono że to świadome ograniczenia MVP, nie zapomniane zadania
+- TODO pozostaje w kodzie jako wskazówka dla przyszłej implementacji
+- **Kod**: `SPEC_PACER_EXPORT_v2.md:806-830`
+
+**Podsumowanie Findings**: Wszystkie uwagi były trafne i wskazywały rzeczywiste problemy lub niejednoznaczności w spec. Wprowadzono poprawki i dodano sekcję "Ograniczenia MVP" dla przejrzystości.
