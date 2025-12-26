@@ -82,10 +82,9 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Should have preset name + 36 control step messages (6 buttons × 6 steps)
-        # Count F0...F7 pairs
+        # Message count: 1 name + 6 × (1 mode + 6 steps + 6 LED) = 79
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        assert f0_count == 37  # 1 name + 36 steps
+        assert f0_count == 79
 
     def test_export_multiple_actions(self, devices):
         """Export button with multiple actions."""
@@ -111,22 +110,29 @@ class TestExportWithButtons:
 class TestExportEmptySteps:
     """Tests for empty/inactive step handling."""
 
-    def test_empty_button_clears_steps(self, devices):
-        """Empty song generates MSG_CTRL_OFF for all steps."""
+    def test_empty_button_generates_steps(self, devices):
+        """Empty song generates step messages for all 6 steps per button."""
         song = Song(
-            song=SongMetadata(id="empty", name="Empty"),
+            song=SongMetadata(id="empty", name="XYZ"),
             pacer=[]
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # All 36 steps should have MSG_CTRL_OFF (0x61)
-        # Each control step message contains the msg_type
-        assert syx.count(bytes([c.MSG_CTRL_OFF])) == 36
+        # MSG_CTRL_OFF (0x61) appears in each step as msg_type value
+        # Element IDs for msg_type: step1=0x02, step2=0x08, step3=0x0E, etc.
+        # We count pattern [elm, 0x01, 0x61] for each step
+        total_ctrl_off = 0
+        for step in range(1, 7):
+            msg_type_elm = (step - 1) * 6 + 2  # 0x02, 0x08, 0x0E, 0x14, 0x1A, 0x20
+            pattern = bytes([msg_type_elm, 0x01, c.MSG_CTRL_OFF])
+            total_ctrl_off += syx.count(pattern)
+        # All 6 buttons × 6 steps = 36
+        assert total_ctrl_off == 36
 
-    def test_partial_button_clears_remaining(self, devices):
-        """Button with 2 actions clears remaining 4 steps."""
+    def test_partial_button_has_mixed_steps(self, devices):
+        """Button with actions has active steps, rest are inactive."""
         song = Song(
-            song=SongMetadata(id="px", name="PX"),  # No 'a' in name to avoid MSG_CTRL_OFF collision
+            song=SongMetadata(id="px", name="PX"),
             pacer=[
                 PacerButton(
                     name="Btn",
@@ -139,10 +145,14 @@ class TestExportEmptySteps:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Button 1: 2 active + 4 inactive
-        # Buttons 2-6: 6 inactive each = 30
-        # Total inactive: 4 + 30 = 34
-        assert syx.count(bytes([c.MSG_CTRL_OFF])) == 34
+        # Button 1 has 2 actions with MSG_SW_PRG_STEP (0x46)
+        # Count MSG_SW_PRG_STEP patterns
+        total_prg_step = 0
+        for step in range(1, 7):
+            msg_type_elm = (step - 1) * 6 + 2
+            pattern = bytes([msg_type_elm, 0x01, c.MSG_SW_PRG_STEP])
+            total_prg_step += syx.count(pattern)
+        assert total_prg_step == 2  # 2 active steps
 
 
 class TestExportSysExFormat:
@@ -187,3 +197,66 @@ class TestExportSysExFormat:
         for i, b in enumerate(syx[:-1]):
             if b == c.SYSEX_END:
                 assert syx[i+1] == c.SYSEX_START
+
+
+class TestExportLed:
+    """Tests for LED color export."""
+
+    def test_export_includes_led_off_for_empty_buttons(self, devices):
+        """Empty buttons get LED_OFF colors."""
+        song = Song(
+            song=SongMetadata(id="test", name="LED"),
+            pacer=[]
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        # All 6 buttons × 6 steps = 36 LED messages
+        # LED active color elements: 0x41 (step1), 0x45 (step2), 0x49 (step3), etc.
+        total_led_off = 0
+        for step in range(1, 7):
+            active_color_element = (step - 1) * 4 + 0x41
+            total_led_off += syx.count(bytes([active_color_element, 0x01, c.LED_OFF]))
+        assert total_led_off == 36  # All 6 buttons × 6 steps
+
+    def test_export_led_colors_for_buttons_with_actions(self, devices):
+        """Buttons with actions get BLUE/AMBER colors."""
+        song = Song(
+            song=SongMetadata(id="test", name="CLR"),
+            pacer=[
+                PacerButton(
+                    name="Btn",
+                    actions=[Action(device="boss", type=ActionType.PRESET, value=1)]
+                )
+            ]
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        # Button 1 has actions: 6 steps with BLUE/AMBER
+        # Buttons 2-6 empty: 30 steps with OFF/OFF
+        # LED active color elements: 0x41 (step1), 0x45 (step2), 0x49 (step3), etc.
+        total_blue = 0
+        total_amber = 0
+        total_off = 0
+        for step in range(1, 7):
+            active_color_element = (step - 1) * 4 + 0x41
+            inactive_color_element = (step - 1) * 4 + 0x42
+            total_blue += syx.count(bytes([active_color_element, 0x01, c.LED_BLUE]))
+            total_amber += syx.count(bytes([inactive_color_element, 0x01, c.LED_AMBER]))
+            total_off += syx.count(bytes([active_color_element, 0x01, c.LED_OFF]))
+
+        assert total_blue == 6  # Button 1 × 6 steps
+        assert total_amber == 6
+        assert total_off == 30  # Buttons 2-6 × 6 steps
+
+    def test_export_message_count_with_led(self, devices):
+        """Export includes LED messages for all 6 steps per button."""
+        song = Song(
+            song=SongMetadata(id="test", name="CNT"),
+            pacer=[]
+        )
+        syx = export_song_to_syx(song, devices, "A1")
+
+        # Count F0 (message starts)
+        f0_count = syx.count(bytes([c.SYSEX_START]))
+        # 1 name + 6 × (1 mode + 6 steps + 6 LED) = 79
+        assert f0_count == 79

@@ -74,3 +74,66 @@ class PacerSysExBuilder:
         payload = c.MANUFACTURER_ID + header + bytes(params)
         cs = checksum(payload)
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
+
+    def build_control_mode(
+        self,
+        control_id: int,
+        mode: int = 0
+    ) -> bytes:
+        """Ustaw tryb kontrolki.
+
+        Args:
+            control_id: ID kontrolki (0x0D-0x12 dla SW1-SW6)
+            mode: Tryb (0=all steps in one shot, 1=toggle, etc.)
+        """
+        params = [c.CONTROL_MODE_ELEMENT, 0x01, mode]
+
+        header = bytes([
+            c.DEVICE_ID,
+            c.CMD_SET,
+            c.TARGET_PRESET,
+            self.preset_index,
+            control_id
+        ])
+        payload = c.MANUFACTURER_ID + header + bytes(params)
+        cs = checksum(payload)
+        return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
+
+    def build_control_led(
+        self,
+        control_id: int,
+        step_index: int,
+        active_color: int = c.LED_AMBER,
+        inactive_color: int = c.LED_OFF,
+        led_midi_ctrl: int = 0,
+        led_num: int = 0
+    ) -> bytes:
+        """Konfiguruj LED dla kontrolki (konkretny step).
+
+        Args:
+            control_id: ID kontrolki (0x0D-0x12 dla SW1-SW6)
+            step_index: Numer kroku (1-6)
+            active_color: Kolor gdy aktywny (domyślnie amber)
+            inactive_color: Kolor gdy nieaktywny (domyślnie off)
+            led_midi_ctrl: CC do zdalnej kontroli (0=wyłączone)
+            led_num: Która LED (0=default, 1=bottom, 2=middle, 3=top)
+        """
+        # LED elements: step1=0x40-0x43, step2=0x44-0x47, etc.
+        base = (step_index - 1) * 4 + 0x40
+        params = []
+        # Format: [element, 0x01, value, 0x00] dla każdego oprócz ostatniego
+        params.extend([base + 0, 0x01, led_midi_ctrl, 0x00])
+        params.extend([base + 1, 0x01, active_color, 0x00])
+        params.extend([base + 2, 0x01, inactive_color, 0x00])
+        params.extend([base + 3, 0x01, led_num])  # Ostatni - bez paddingu
+
+        header = bytes([
+            c.DEVICE_ID,
+            c.CMD_SET,
+            c.TARGET_PRESET,
+            self.preset_index,
+            control_id
+        ])
+        payload = c.MANUFACTURER_ID + header + bytes(params)
+        cs = checksum(payload)
+        return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])

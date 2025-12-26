@@ -67,3 +67,12 @@ pacer:
     label: null
     bank_lsb: 0
     bank_msb: 0
+- name: '4'
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 4
+    label: null
+    bank_lsb: 0
+    bank_msb: 0

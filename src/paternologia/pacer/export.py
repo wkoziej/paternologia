@@ -37,7 +37,10 @@ def export_song_to_syx(
         control_id = c.STOMPSWITCHES[btn_idx]
         button = song.pacer[btn_idx] if btn_idx < len(song.pacer) else None
 
-        # Zawsze konfiguruj wszystkie 6 kroków (czyszczenie niewykorzystanych)
+        # 2a. Control Mode (musi być przed steps!) - mode=0 = "all steps in one shot"
+        messages.append(builder.build_control_mode(control_id, mode=0))
+
+        # 2b. Zawsze konfiguruj wszystkie 6 kroków (czyszczenie niewykorzystanych)
         for step_idx in range(1, 7):
             if button and step_idx <= len(button.actions):
                 # Akcja istnieje - konfiguruj normalnie
@@ -66,6 +69,25 @@ def export_song_to_syx(
                     data2=0,
                     data3=0,
                     active=False
+                ))
+
+        # 2c. Konfiguracja LED dla WSZYSTKICH 6 stepów (pacer wymaga LED dla każdego stepu)
+        has_actions = button and len(button.actions) > 0
+        for step_idx in range(1, 7):
+            if has_actions:
+                messages.append(builder.build_control_led(
+                    control_id=control_id,
+                    step_index=step_idx,
+                    active_color=c.LED_BLUE,
+                    inactive_color=c.LED_AMBER
+                ))
+            else:
+                # Przycisk bez akcji - LED wyłączony
+                messages.append(builder.build_control_led(
+                    control_id=control_id,
+                    step_index=step_idx,
+                    active_color=c.LED_OFF,
+                    inactive_color=c.LED_OFF
                 ))
 
     return b"".join(messages)

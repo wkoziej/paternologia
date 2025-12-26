@@ -67,3 +67,37 @@ pacer:
     label: null
     bank_lsb: 0
     bank_msb: 0
+- name: '4'
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 4
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+  - device: ms
+    type: pattern
+    value: a4
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+- name: '5'
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 5
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+- name: '6'
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 6
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
