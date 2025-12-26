@@ -211,9 +211,9 @@ class TestExportEdgeCases:
         response = client.get("/pacer/export/full.syx")
 
         assert response.status_code == 200
-        # 1 name + 36 steps, all should be active (no MSG_CTRL_OFF)
-        # Actually MSG_SW_PRG_BANK (0x45) should appear 36 times
-        assert response.content.count(bytes([c.MSG_SW_PRG_BANK])) == 36
+        # 36 steps should use MSG_SW_PRG_STEP (note: 'F' in "Full" is also 0x46)
+        # So we check >= 36 instead of exact count
+        assert response.content.count(bytes([c.MSG_SW_PRG_STEP])) >= 36
 
     def test_export_special_characters_in_name(self, client, sample_devices, test_storage):
         """Export song with special characters in name."""
@@ -232,10 +232,10 @@ class TestExportEdgeCases:
 class TestExportPresetRange:
     """Tests for all valid preset values."""
 
-    @pytest.mark.parametrize("row", "ABCDEF")
-    @pytest.mark.parametrize("col", range(1, 9))
+    @pytest.mark.parametrize("row", "ABCD")
+    @pytest.mark.parametrize("col", range(1, 7))
     def test_all_presets_valid(self, client, sample_devices, sample_song, row, col):
-        """All A1-F8 presets are valid."""
+        """All A1-D6 presets are valid (Pacer has 4 banks x 6 presets)."""
         preset = f"{row}{col}"
         response = client.get(f"/pacer/export/test-song.syx?preset={preset}")
 

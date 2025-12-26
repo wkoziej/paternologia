@@ -17,7 +17,7 @@ def export_song_to_syx(
     Args:
         song: Piosenka z Paternologii
         devices: Lista urządzeń (do mapowania device_id → MIDI channel)
-        target_preset: Preset docelowy (A1-F8)
+        target_preset: Preset docelowy (CURRENT, A1-D6)
 
     Returns:
         bytes: Zawartość pliku .syx (konkatenacja wiadomości)

@@ -25,7 +25,7 @@ def export_syx(
 
     # Walidacja preset
     if preset.upper() not in c.PRESET_INDICES:
-        raise HTTPException(400, f"Invalid preset: {preset}. Must be A1-F8.")
+        raise HTTPException(400, f"Invalid preset: {preset}. Valid: CURRENT, A1-D6.")
 
     # Pobierz devices do mapowania MIDI channels
     devices = storage.get_devices()

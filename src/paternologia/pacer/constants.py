@@ -23,17 +23,27 @@ CONTROL_MODE_ELEMENT = 0x60  # Element dla trybu kontrolki
 
 # Message types (używane w control step data)
 MSG_CTRL_OFF = 0x61       # Kontrolka wyłączona
-MSG_SW_PRG_BANK = 0x45    # Program Change + Bank (PRESET)
-MSG_SW_PRG_STEP = 0x46    # Program Step (PATTERN - start/end)
-MSG_AD_MIDI_CC = 0x00     # Control Change (CC)
+MSG_SW_PRG_BANK = 0x45    # Program Change + Bank: data1=program, data2=bank LSB, data3=bank MSB
+MSG_SW_PRG_STEP = 0x46    # Program Step: data1=unused, data2=start, data3=end (start=end dla immediate)
+MSG_SW_MIDI_CC_TGGLE = 0x47  # CC Toggle dla stompswitch: data1=controller, data2=value1, data3=value2
+MSG_SW_MIDI_CC_STEP = 0x48   # CC Step dla stompswitch: data1=controller, data2=start, data3=end
+# MSG_AD_MIDI_CC = 0x00 - NIE UŻYWAĆ dla stompswitch! To jest dla Expression Pedals
 
 # LED colors
 LED_OFF = 0x00
 LED_GREEN = 0x0D
 LED_RED = 0x03
 
-# Preset mapping: "A1" -> 0x00, "F8" -> 0x2F
+# Preset indices according to Pacer protocol (from pacer-editor dumps/README.md)
+# idx=0x00 = Current (writes to RAM, visible immediately)
+# idx=0x01-0x18 = User presets A1-D6 (6 presets per bank)
+# Formula: idx = (bank * 6) + col, where bank=0-3 (A-D), col=1-6
+PRESET_INDEX_CURRENT = 0x00
+
 PRESET_INDICES = {
-    f"{row}{col}": (ord(row) - ord('A')) * 8 + (col - 1)
-    for row in "ABCDEF" for col in range(1, 9)
+    "CURRENT": PRESET_INDEX_CURRENT,
+    **{
+        f"{row}{col}": (ord(row) - ord('A')) * 6 + col
+        for row in "ABCD" for col in range(1, 7)
+    }
 }

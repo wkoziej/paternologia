@@ -104,8 +104,8 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Verify MSG_SW_PRG_BANK (0x45) appears multiple times
-        assert syx.count(bytes([c.MSG_SW_PRG_BANK])) >= 3
+        # Verify MSG_SW_PRG_STEP (0x46) appears multiple times
+        assert syx.count(bytes([c.MSG_SW_PRG_STEP])) >= 3
 
 
 class TestExportEmptySteps:

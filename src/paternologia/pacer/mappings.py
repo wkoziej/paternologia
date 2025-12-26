@@ -57,34 +57,35 @@ def action_to_midi(
     Returns:
         (msg_type, channel, data1, data2, data3)
 
-    Dla MSG_SW_PRG_BANK: data1=program, data2=bank LSB, data3=bank MSB
-    Dla MSG_AD_MIDI_CC: data1=CC number, data2=value, data3=unused (0)
+    Dla MSG_SW_PRG_STEP: data1=unused, data2=start, data3=end (start=end dla immediate)
+    Dla MSG_SW_MIDI_CC_TGGLE: data1=controller, data2=value1 (ON), data3=value2 (OFF)
     """
     channel = get_device_channel(action.device, device_channel_map)
 
     if action.type == ActionType.PRESET:
-        # Program Change + Bank
-        # data1 = program number, data2 = bank LSB, data3 = bank MSB
+        # Program Step: data1=unused, data2=start, data3=end
+        # Używamy start=end dla natychmiastowego przełączenia presetu
         program = action.value if isinstance(action.value, int) else 0
         return (
-            c.MSG_SW_PRG_BANK,
+            c.MSG_SW_PRG_STEP,
             channel,
-            program,
-            action.bank_lsb,
-            action.bank_msb
+            0,        # data1 = unused
+            program,  # data2 = start (program number)
+            program   # data3 = end (ten sam = immediate)
         )
 
     elif action.type == ActionType.PATTERN:
-        # Pattern na Model:Samples = Program Change (jak preset)
+        # Pattern na Model:Samples = Program Step
         # M:S używa PC 0-95 do wyboru pattern 1-96
         program = pattern_to_program(action.value)
-        return (c.MSG_SW_PRG_BANK, channel, program, 0, 0)
+        return (c.MSG_SW_PRG_STEP, channel, 0, program, program)
 
     elif action.type == ActionType.CC:
-        # Control Change
-        # action.value jest wymagane (walidowane przez model)
-        cc_value = action.value if isinstance(action.value, int) else 0
-        return (c.MSG_AD_MIDI_CC, channel, action.cc or 0, cc_value, 0)
+        # CC Toggle dla stompswitch: data1=controller, data2=value1, data3=value2
+        # Wysyła naprzemiennie value1/value2 przy kolejnych naciśnięciach
+        # Dla RC-600 w trybie MOMENT: 127=ON, 0=OFF
+        cc_value = action.value if isinstance(action.value, int) else 127
+        return (c.MSG_SW_MIDI_CC_TGGLE, channel, action.cc or 0, cc_value, 0)
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")

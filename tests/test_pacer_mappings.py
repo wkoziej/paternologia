@@ -88,33 +88,27 @@ class TestActionToMidiPreset:
     """Tests for PRESET action conversion."""
 
     def test_preset_basic(self):
-        """PRESET action converts to MSG_SW_PRG_BANK."""
+        """PRESET action converts to MSG_SW_PRG_STEP."""
         action = Action(device="boss", type=ActionType.PRESET, value=5)
         channel_map = {"boss": 0}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_SW_PRG_BANK
+        assert msg_type == c.MSG_SW_PRG_STEP
         assert channel == 0
-        assert data1 == 5  # program
-        assert data2 == 0  # bank LSB
-        assert data3 == 0  # bank MSB
+        assert data1 == 0  # unused
+        assert data2 == 5  # start (program)
+        assert data3 == 5  # end (same = immediate)
 
-    def test_preset_with_bank(self):
-        """PRESET action with bank MSB/LSB."""
-        action = Action(
-            device="boss",
-            type=ActionType.PRESET,
-            value=10,
-            bank_lsb=1,
-            bank_msb=2
-        )
+    def test_preset_different_channel(self):
+        """PRESET action on different channel."""
+        action = Action(device="boss", type=ActionType.PRESET, value=10)
         channel_map = {"boss": 3}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
         assert channel == 3
-        assert data1 == 10
-        assert data2 == 1  # bank LSB
-        assert data3 == 2  # bank MSB
+        assert data1 == 0  # unused
+        assert data2 == 10  # start (program)
+        assert data3 == 10  # end (same = immediate)
 
 
 class TestActionToMidiPattern:
@@ -126,9 +120,11 @@ class TestActionToMidiPattern:
         channel_map = {"ms": 1}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_SW_PRG_BANK
+        assert msg_type == c.MSG_SW_PRG_STEP
         assert channel == 1
-        assert data1 == 1  # A02 = 1
+        assert data1 == 0  # unused
+        assert data2 == 1  # A02 = 1
+        assert data3 == 1  # same = immediate
 
     def test_pattern_integer(self):
         """PATTERN with integer value."""
@@ -136,23 +132,25 @@ class TestActionToMidiPattern:
         channel_map = {"ms": 1}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert data1 == 50
+        assert data1 == 0  # unused
+        assert data2 == 50  # start (program)
+        assert data3 == 50  # end (same = immediate)
 
 
 class TestActionToMidiCC:
     """Tests for CC action conversion."""
 
     def test_cc_action(self):
-        """CC action converts to MSG_AD_MIDI_CC."""
+        """CC action converts to MSG_SW_MIDI_CC_TGGLE (toggle 127/0)."""
         action = Action(device="boss", type=ActionType.CC, cc=74, value=127)
         channel_map = {"boss": 0}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_AD_MIDI_CC
+        assert msg_type == c.MSG_SW_MIDI_CC_TGGLE
         assert channel == 0
         assert data1 == 74  # CC number
-        assert data2 == 127  # CC value
-        assert data3 == 0
+        assert data2 == 127  # value1 (ON)
+        assert data3 == 0    # value2 (OFF)
 
     def test_cc_different_channel(self):
         """CC action on different channel."""
@@ -160,7 +158,10 @@ class TestActionToMidiCC:
         channel_map = {"freak": 5}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
+        assert msg_type == c.MSG_SW_MIDI_CC_TGGLE
         assert channel == 5
+        assert data2 == 64  # value1 (ON)
+        assert data3 == 0   # value2 (OFF)
 
 
 class TestActionToMidiUnknownDevice:

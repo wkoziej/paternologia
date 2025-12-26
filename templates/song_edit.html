@@ -206,7 +206,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (type === 'cc') {
             html = `
                 <input type="number" name="button_${buttonIdx}_action_${actionIdx}_cc" placeholder="CC #" required
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
+                       class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
+                <input type="number" name="button_${buttonIdx}_action_${actionIdx}_value" placeholder="Value" required min="0" max="127"
+                       class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
                 <input type="text" name="button_${buttonIdx}_action_${actionIdx}_label" placeholder="Label"
                        class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
             `;

@@ -1,82 +1,69 @@
 song:
   id: w-ciszy
-  name: W ciszy
+  name: cisza
   author: Wojtas
-  created: '2025-12-16'
-  notes: Tempo?
+  created: '2025-12-26'
+  notes: tempo 117 :)
 pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
   actions:
   - device: boss
     type: preset
-    value: 1
+    value: 0
     cc: null
     label: 'nazwa: W ciszy'
+    bank_lsb: 0
+    bank_msb: 0
+  - device: freak
+    type: preset
+    value: 64
+    cc: null
+    label: W ciszy
+    bank_lsb: 0
+    bank_msb: 0
   - device: ms
     type: pattern
     value: A01
     cc: null
     label: Gramy melodię na MicroFreak
-  - device: freak
-    type: preset
-    value: 65
-    cc: null
-    label: W ciszy
+    bank_lsb: 0
+    bank_msb: 0
   - device: boss
     type: cc
-    value: 127
+    value: 1
     cc: 1
     label: Track 1 Rec/Play
-- name: Verse
+    bank_lsb: 0
+    bank_msb: 0
+- name: Drum A3 i efekt na IN
   actions:
   - device: ms
     type: pattern
     value: A02
     cc: null
     label: null
+    bank_lsb: 0
+    bank_msb: 0
   - device: boss
     type: cc
-    value: 127
+    value: 1
     cc: 2
-    label: Toggle In FX A
-  - device: boss
-    type: cc
-    value: 127
-    cc: 1
-    label: Track 1 Rec/Play
-- name: Kolejny
+    label: In FX A
+    bank_lsb: 0
+    bank_msb: 0
+- name: efekt na ścieżce i perkusja A3
   actions:
   - device: boss
     type: cc
-    value: 127
-    cc: 2
-    label: '?'
+    value: 1
+    cc: 3
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
   - device: ms
     type: pattern
-    value: ss
+    value: a03
     cc: null
     label: null
-  - device: freak
-    type: preset
-    value: 2
-    cc: null
-    label: null
-- name: fgdafgs
-  actions:
-  - device: boss
-    type: preset
-    value: 1
-    cc: null
-    label: sfsd
-- name: fn nxbnxbvbxvbx
-  actions:
-  - device: freak
-    type: preset
-    value: 1
-    cc: null
-    label: eqweq
-  - device: boss
-    type: cc
-    value: 127
-    cc: 22
-    label: 22asdfa
+    bank_lsb: 0
+    bank_msb: 0
