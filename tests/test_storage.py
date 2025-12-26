@@ -68,14 +68,14 @@ def sample_song():
                     Action(device="boss", type=ActionType.PRESET, value=1, label="W ciszy"),
                     Action(device="ms", type=ActionType.PATTERN, value="A0"),
                     Action(device="freak", type=ActionType.PRESET, value=51, label="W ciszy"),
-                    Action(device="boss", type=ActionType.CC, cc=1, label="Play/Rec"),
+                    Action(device="boss", type=ActionType.CC, cc=1, value=127, label="Play/Rec"),
                 ],
             ),
             PacerButton(
                 name="Verse",
                 actions=[
                     Action(device="ms", type=ActionType.PATTERN, value="A1"),
-                    Action(device="boss", type=ActionType.CC, cc=1, label="Play/Rec"),
+                    Action(device="boss", type=ActionType.CC, cc=1, value=127, label="Play/Rec"),
                 ],
             ),
         ],

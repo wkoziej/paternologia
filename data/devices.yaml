@@ -2,16 +2,19 @@ devices:
   - id: boss
     name: RC-600
     description: Loop Station
+    midi_channel: 1
     action_types:
       - preset
       - cc
   - id: ms
     name: Elektron M:S
     description: Sampler/Sequencer
+    midi_channel: 14
     action_types:
       - pattern
   - id: freak
     name: MicroFreak
     description: Synthesizer
+    midi_channel: 2
     action_types:
       - preset

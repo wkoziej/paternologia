@@ -96,14 +96,16 @@ class TestAction:
         assert action.value == "A0"
 
     def test_cc_action(self):
-        """CC action with cc number."""
+        """CC action with cc number and value."""
         action = Action(
             device="boss",
             type=ActionType.CC,
             cc=1,
+            value=127,
             label="Play/Rec",
         )
         assert action.cc == 1
+        assert action.value == 127
         assert action.label == "Play/Rec"
 
     def test_action_requires_device(self):

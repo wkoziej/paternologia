@@ -176,6 +176,7 @@ class TestFullUserWorkflow:
                 "button_1_action_0_device": "boss",
                 "button_1_action_0_type": "cc",
                 "button_1_action_0_cc": "2",
+                "button_1_action_0_value": "127",
                 "button_1_action_0_label": "Loop Start",
                 "button_2_name": "Bridge",
                 "button_2_action_0_device": "freak",

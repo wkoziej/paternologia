@@ -3,9 +3,9 @@
 
 from datetime import date
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ActionType(str, Enum):
@@ -25,6 +25,12 @@ class Device(BaseModel):
     action_types: list[ActionType] = Field(
         default_factory=list, description="Supported action types"
     )
+    midi_channel: int = Field(
+        default=0,
+        ge=0,
+        le=15,
+        description="MIDI channel (0-15) for this device"
+    )
 
 
 class DevicesConfig(BaseModel):
@@ -41,6 +47,28 @@ class Action(BaseModel):
     value: int | str | None = Field(default=None, description="Action value (preset/pattern number)")
     cc: int | None = Field(default=None, description="MIDI CC number (for cc type)")
     label: str | None = Field(default=None, description="Optional display label")
+    bank_lsb: int = Field(
+        default=0,
+        ge=0,
+        le=127,
+        description="Bank LSB (CC 32) for PRESET type"
+    )
+    bank_msb: int = Field(
+        default=0,
+        ge=0,
+        le=127,
+        description="Bank MSB (CC 0) for PRESET type"
+    )
+
+    @model_validator(mode='after')
+    def validate_cc_value(self) -> 'Action':
+        """Wymaga value dla ActionType.CC."""
+        if self.type == ActionType.CC and self.value is None:
+            raise ValueError("ActionType.CC wymaga pola 'value' (0-127)")
+        if self.type == ActionType.CC:
+            if not isinstance(self.value, int) or self.value < 0 or self.value > 127:
+                raise ValueError(f"ActionType.CC value musi być 0-127, otrzymano: {self.value}")
+        return self
 
 
 class PacerButton(BaseModel):

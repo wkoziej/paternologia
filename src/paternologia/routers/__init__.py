@@ -2,6 +2,7 @@
 # ABOUTME: Exposes songs and devices routers for FastAPI app.
 
 from paternologia.routers.devices import router as devices_router
+from paternologia.routers.pacer import router as pacer_router
 from paternologia.routers.songs import router as songs_router
 
-__all__ = ["songs_router", "devices_router"]
+__all__ = ["songs_router", "devices_router", "pacer_router"]

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from paternologia.dependencies import get_storage
-from paternologia.routers import devices_router, songs_router
+from paternologia.routers import devices_router, pacer_router, songs_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STATIC_DIR = BASE_DIR / "static"
@@ -33,3 +33,4 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.include_router(songs_router)
 app.include_router(devices_router)
+app.include_router(pacer_router)
