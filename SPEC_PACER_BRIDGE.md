@@ -139,7 +139,7 @@ NODE_OPTIONS=--openssl-legacy-provider yarn start
 
 ### Faza 2: Eksport z Paternologii do .syx
 
-#### 4.1 Generator plików SysEx
+#### 3.5 Generator plików SysEx
 
 Wykorzystamy kod z pierwszej specyfikacji do generowania plików .syx:
 
@@ -191,7 +191,7 @@ def export_song_to_syx(song: Song, target_preset: str = "A1") -> bytes:
     return b"".join(messages)
 ```
 
-#### 2.2 Endpoint API
+#### 3.6 Endpoint API
 
 ```python
 # src/paternologia/routers/pacer.py
@@ -221,7 +221,7 @@ def export_syx(song_id: str, preset: str = "A1"):
 
 ### Faza 3: Integracja UI
 
-#### 3.1 Opcja A: Osobne aplikacje (najprostsza)
+#### 3.7 Opcja A: Osobne aplikacje (najprostsza)
 
 ```html
 <!-- templates/song_detail.html -->
@@ -255,7 +255,7 @@ document.getElementById('preset-select').addEventListener('change', (e) => {
 </script>
 ```
 
-#### 3.2 Opcja B: Embedded iframe (średnia złożoność)
+#### 3.8 Opcja B: Embedded iframe (średnia złożoność)
 
 ```html
 <!-- Osadź pacer-editor w iframe -->
@@ -269,7 +269,7 @@ document.getElementById('preset-select').addEventListener('change', (e) => {
 
 **Problem**: Drag & drop pliku .syx do iframe może nie działać.
 
-#### 3.3 Opcja C: Wspólny backend (zaawansowana)
+#### 3.9 Opcja C: Wspólny backend (zaawansowana)
 
 Dodanie API do pacer-editor, które przyjmuje dane z Paternologii:
 
@@ -307,7 +307,7 @@ async function sendToPacerEditor(songId, preset) {
 
 Jeśli stare zależności powodują problemy:
 
-#### 4.1 Aktualizacja React
+#### 3.10 Aktualizacja React
 
 ```bash
 cd pacer-editor
@@ -324,7 +324,7 @@ npm install mobx@6 mobx-react@9
 # - React 18: createRoot zamiast ReactDOM.render
 ```
 
-#### 4.2 Migracja do Vite (alternatywa)
+#### 3.11 Migracja do Vite (alternatywa)
 
 ```bash
 # Szybsza alternatywa dla react-scripts
@@ -332,7 +332,7 @@ npm create vite@latest pacer-editor-modern -- --template react
 # Przenieś src/ do nowego projektu
 ```
 
-## 5. Workflow użytkownika
+## 4. Workflow użytkownika
 
 ### Scenariusz: Konfiguracja piosenki na Pacerze
 
@@ -364,7 +364,7 @@ amidi -p hw:8,0,0 -S "F0 00 01 77 7F 02 7F F7" -r ~/pacer_backup.syx -t 10
 amidi -p hw:8,0,0 -s ~/pacer_backup.syx
 ```
 
-## 4. Struktura plików
+## 5. Struktura plików
 
 ```
 paternologia/
@@ -384,7 +384,7 @@ paternologia/
         └── pacer-editor/     # Sklonowane repo (do uruchomienia)
 ```
 
-## 5. Minimalna implementacja (MVP)
+## 6. Minimalna implementacja (MVP)
 
 ### Co zrobić od razu:
 
@@ -409,7 +409,7 @@ paternologia/
 - Konfiguracja kanałów MIDI per urządzenie
 - Kolorystyka LED
 
-## 6. Testowanie
+## 7. Testowanie
 
 ### Test manualny workflow:
 
@@ -460,7 +460,7 @@ def test_control_step_sysex():
     assert sysex[6] == 0x01  # TARGET_PRESET
 ```
 
-## 9. Porównanie podejść
+## 8. Porównanie podejść
 
 | Aspekt | Spec 1 (python-rtmidi) | Spec 2 (amidi + pacer-editor) |
 |--------|------------------------|-------------------------------|
@@ -471,7 +471,7 @@ def test_control_step_sysex():
 | Maintenance | Więcej kodu | Mniej kodu, sprawdzone narzędzia |
 | Backup/restore | Do napisania | ✅ amidi obsługuje |
 
-## 10. Rekomendacja
+## 9. Rekomendacja
 
 **Użyj Spec 2 (amidi)** - działa od razu:
 
@@ -485,7 +485,7 @@ def test_control_step_sysex():
 2. Dodaj endpoint `GET /pacer/export/{song_id}.syx`
 3. Dodaj przycisk w UI + instrukcję `amidi -p hw:8,0,0 -s ...`
 
-## 11. Źródła i pliki
+## 10. Źródła i pliki
 
 ### Lokalne pliki
 - `workspace/pacer_programming/pacer_current_dump.syx` - backup Twojego Pacera
