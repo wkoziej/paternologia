@@ -1,0 +1,3 @@
+[submodule "workspace/pacer-editor"]
+	path = workspace/pacer-editor
+	url = https://github.com/francoisgeorgy/pacer-editor.git

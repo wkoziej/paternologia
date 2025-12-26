@@ -88,3 +88,19 @@ Three test levels:
 - `test_api.py` + `test_e2e.py` - FastAPI endpoints and user workflows
 
 Tests use temporary directories via pytest fixtures to isolate storage.
+
+## References
+
+### pacer-editor (git submodule)
+
+Located at `workspace/pacer-editor/` - reference implementation for Nektar Pacer protocol:
+- `src/pacer/constants.js` - Protocol constants (control IDs, message types, LED colors)
+- `src/pacer/sysex.js` - SysEx message building, checksum algorithm
+- `sysex.md`, `data_structure.md` - Protocol documentation
+
+**Usage:**
+- Reference source of truth for protocol implementation
+- Visual verification tool (drag .syx files to http://localhost:3000)
+- Optional: `cd workspace/pacer-editor && NODE_OPTIONS=--openssl-legacy-provider yarn start`
+
+**Note:** Web MIDI doesn't work on Ubuntu/snap - use `amidi` for actual device communication.
