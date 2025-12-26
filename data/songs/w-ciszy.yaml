@@ -24,7 +24,7 @@ pacer:
     label: W ciszy
   - device: boss
     type: cc
-    value: null
+    value: 127
     cc: 1
     label: Track 1 Rec/Play
 - name: Verse
@@ -36,19 +36,19 @@ pacer:
     label: null
   - device: boss
     type: cc
-    value: null
+    value: 127
     cc: 2
     label: Toggle In FX A
   - device: boss
     type: cc
-    value: null
+    value: 127
     cc: 1
     label: Track 1 Rec/Play
 - name: Kolejny
   actions:
   - device: boss
     type: cc
-    value: null
+    value: 127
     cc: 2
     label: '?'
   - device: ms
@@ -77,6 +77,6 @@ pacer:
     label: eqweq
   - device: boss
     type: cc
-    value: null
+    value: 127
     cc: 22
     label: 22asdfa
