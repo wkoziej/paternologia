@@ -782,3 +782,57 @@ hexdump -C test.syx
 - Eliminuje drift między devices.yaml a hardcoded mapą
 - Przygotowuje grunt pod Device.midi_channel w przyszłości
 - Fallback do DEFAULT_DEVICE_CHANNELS jeśli brak midi_channel
+
+## Review 3 (SPEC_PACER_EXPORT_v2_REVIEW_3.md)
+
+Wszystkie 5 uwag zostały zweryfikowane jako **nieprawdziwe** - spec jest poprawny.
+
+### 1. ❌ Niespójne sygnatury funkcji
+**Claim**: Router wywołuje `export_song_to_syx(song, devices, preset)`, ale funkcja przyjmuje tylko `(song, target_preset)`.
+
+**Weryfikacja**:
+- `export.py:323-326`: `def export_song_to_syx(song: Song, devices: list[Device], target_preset: str = "A1")`
+- `routers/pacer.py:420`: `syx_data = export_song_to_syx(song, devices, preset)`
+- **Status**: Sygnatury są identyczne. Review nieprawidłowy.
+
+### 2. ❌ Format nazwy presetu
+**Claim**: Przykład protokołu (8 bajtów paddingowanych) przeczy implementacji (długość + zmienne bajty).
+
+**Weryfikacja**:
+- Przykład `SPEC:86-88`: `04 53 4F 4E 47` = długość(4) + "SONG"
+- `build_preset_name:191-193`: `bytes([len(ascii_name)]) + ascii_name`
+- `pacer-editor/sysex.js:858`: `msg.push(s.length)` + ASCII
+- **Status**: Format jest spójny. Review nieprawidłowy.
+
+### 3. ❌ Element w headerze control_step
+**Claim**: Spec opisuje Element w headerze, ale build_control_step go nie używa.
+
+**Weryfikacja z pacer-editor**:
+- **Preset name** (`sysex.js:847-853`): Header = `[CMD, TARGET, INDEX, CONTROL_NAME, 0x00]` - element **obecny**
+- **Control step** (`sysex.js:685-689`): Header = `[CMD, TARGET, INDEX, CONTROL_ID]` - element **nieobecny**
+- Element IDs w control_step są w data bytes: `(step_index-1)*6 + offset` (linia 209-221)
+- **Status**: Różne typy wiadomości mają różne struktury. Implementacja zgodna z protokołem. Review nieprawidłowy.
+
+### 4. ❌ PATTERN TODO
+**Claim**: Mapowanie PATTERN pozostaje w stanie TODO, brak implementacji.
+
+**Weryfikacja**:
+- `mappings.py:265-278`: Pełna implementacja `pattern_to_program()`
+- `mappings.py:298-303`: `ActionType.PATTERN` → `MSG_SW_PRG_BANK` z konwersją "A01"→0
+- Żadnego TODO w kodzie
+- **Status**: PATTERN w pełni zaimplementowany. Review nieprawidłowy.
+
+### 5. ❌ Hardcoded channels
+**Claim**: Devices są pobierane ale nie używane, kanały hardcoded.
+
+**Weryfikacja pełnego flow**:
+1. `routers/pacer.py:418`: `devices = storage.get_devices()`
+2. `routers/pacer.py:420`: Przekazanie do `export_song_to_syx(song, devices, preset)`
+3. `export.py:344`: `device_channel_map = build_device_channel_map(devices)`
+4. `mappings.py:250-260`: Iteracja po `devices`, budowa mapy
+5. `export.py:359`: Przekazanie mapy do `action_to_midi(action, device_channel_map)`
+6. `mappings.py:291`: Użycie mapy do odczytu kanału
+- `DEFAULT_DEVICE_CHANNELS` to **fallback** gdy `Device.midi_channel` nie istnieje
+- **Status**: Devices w pełni wykorzystywane. Review nieprawidłowy.
+
+**Podsumowanie Review 3**: Spec jest poprawny i gotowy do implementacji. Review powstał przez niepełne przeczytanie kodu i niezweryfikowanie twierdzeń z kodem źródłowym pacer-editor.
