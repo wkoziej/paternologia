@@ -91,7 +91,10 @@ class TestFullUserWorkflow:
         response = client.get("/songs/new")
         assert response.status_code == 200
         assert "NOWY UTWÓR" in response.text
-        assert "Boss RC-600" in response.text
+        # Devices are loaded via HTMX partials, not on initial page
+        # Verify HTMX button for adding PACER buttons is present
+        assert "hx-get" in response.text
+        assert "/partials/pacer-button" in response.text
 
         response = client.post(
             "/songs",

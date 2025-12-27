@@ -77,7 +77,10 @@
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold text-gray-700">Przyciski PACER</h2>
             <button type="button"
-                    id="add-button-btn"
+                    hx-get="/partials/pacer-button"
+                    hx-target="#pacer-buttons"
+                    hx-swap="beforeend"
+                    hx-vals="js:{button_idx: document.querySelectorAll('#pacer-buttons .pacer-button-card').length}"
                     class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
                 + Dodaj przycisk
             </button>
@@ -105,132 +108,4 @@
         </button>
     </div>
 </form>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const pacerButtons = document.getElementById('pacer-buttons');
-    const addButtonBtn = document.getElementById('add-button-btn');
-
-    function getButtonCount() {
-        return pacerButtons.querySelectorAll('.pacer-button-card').length;
-    }
-
-    function createButtonCard(buttonIdx) {
-        const card = document.createElement('div');
-        card.className = 'pacer-button-card border border-gray-200 rounded-lg p-4';
-        card.innerHTML = `
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-2">
-                    <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-bold">#${buttonIdx + 1}</span>
-                    <input type="text" name="button_${buttonIdx}_name" placeholder="Nazwa przycisku" required
-                           class="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <button type="button" onclick="this.closest('.pacer-button-card').remove()"
-                        class="text-red-500 hover:text-red-700">🗑️</button>
-            </div>
-            <div class="actions-container space-y-2">
-            </div>
-            <button type="button" onclick="addAction(this, ${buttonIdx})"
-                    class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">+ Dodaj akcję</button>
-        `;
-        return card;
-    }
-
-    addButtonBtn.addEventListener('click', function() {
-        if (getButtonCount() >= 6) {
-            alert('Maksymalnie 6 przycisków PACER');
-            return;
-        }
-        const buttonIdx = getButtonCount();
-        const card = createButtonCard(buttonIdx);
-        pacerButtons.appendChild(card);
-    });
-
-    window.addAction = function(btn, buttonIdx) {
-        const container = btn.previousElementSibling;
-        const actionIdx = container.querySelectorAll('.action-row').length;
-
-        if (actionIdx >= 6) {
-            alert('Maksymalnie 6 akcji na przycisk');
-            return;
-        }
-
-        const devices = {{ devices_json | tojson }};
-        let deviceOptions = devices.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-
-        const row = document.createElement('div');
-        row.className = 'action-row flex gap-2 items-center flex-wrap';
-        row.innerHTML = `
-            <select name="button_${buttonIdx}_action_${actionIdx}_device" required
-                    class="border border-gray-300 rounded px-2 py-1 text-sm"
-                    onchange="updateActionTypes(this, ${buttonIdx}, ${actionIdx})">
-                <option value="">Urządzenie...</option>
-                ${deviceOptions}
-            </select>
-            <select name="button_${buttonIdx}_action_${actionIdx}_type" required
-                    class="border border-gray-300 rounded px-2 py-1 text-sm action-type-select"
-                    onchange="updateActionFields(this, ${buttonIdx}, ${actionIdx})">
-                <option value="">Typ...</option>
-            </select>
-            <div class="action-fields flex gap-2"></div>
-            <button type="button" onclick="this.closest('.action-row').remove()"
-                    class="text-red-500 hover:text-red-700 text-sm">🗑️</button>
-        `;
-        container.appendChild(row);
-    };
-
-    window.updateActionTypes = function(select, buttonIdx, actionIdx) {
-        const devices = {{ devices_json | tojson }};
-        const device = devices.find(d => d.id === select.value);
-        const typeSelect = select.parentElement.querySelector('.action-type-select');
-
-        typeSelect.innerHTML = '<option value="">Typ...</option>';
-        if (device) {
-            device.action_types.forEach(type => {
-                const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type === 'preset' ? 'Preset' : type === 'pattern' ? 'Pattern' : 'CC';
-                typeSelect.appendChild(option);
-            });
-        }
-
-        // Clear action fields
-        select.parentElement.querySelector('.action-fields').innerHTML = '';
-    };
-
-    window.updateActionFields = function(select, buttonIdx, actionIdx) {
-        const fieldsContainer = select.parentElement.querySelector('.action-fields');
-        const type = select.value;
-
-        let html = '';
-        if (type === 'preset') {
-            html = `
-                <input type="number" name="button_${buttonIdx}_action_${actionIdx}_value" placeholder="Preset #" required
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
-                <input type="text" name="button_${buttonIdx}_action_${actionIdx}_label" placeholder="Label"
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            `;
-        } else if (type === 'pattern') {
-            html = `
-                <input type="text" name="button_${buttonIdx}_action_${actionIdx}_value" placeholder="Pattern" required
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
-                <input type="text" name="button_${buttonIdx}_action_${actionIdx}_label" placeholder="Label"
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            `;
-        } else if (type === 'cc') {
-            html = `
-                <input type="number" name="button_${buttonIdx}_action_${actionIdx}_cc" placeholder="CC #" required
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-                <input type="number" name="button_${buttonIdx}_action_${actionIdx}_value" placeholder="Value" required min="0" max="127"
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-                <input type="text" name="button_${buttonIdx}_action_${actionIdx}_label" placeholder="Label"
-                       class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            `;
-        }
-        fieldsContainer.innerHTML = html;
-    };
-});
-</script>
 {% endblock %}

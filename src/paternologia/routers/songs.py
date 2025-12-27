@@ -41,12 +41,11 @@ async def new_song(request: Request):
     storage = get_storage()
     templates = get_templates()
     devices = storage.get_devices()
-    devices_json = [d.model_dump(mode="json") for d in devices]
 
     return templates.TemplateResponse(
         request=request,
         name="song_edit.html",
-        context={"song": None, "devices": devices, "devices_json": devices_json, "is_new": True},
+        context={"song": None, "devices": devices, "is_new": True},
     )
 
 
@@ -81,12 +80,11 @@ async def edit_song(request: Request, song_id: str):
         raise HTTPException(status_code=404, detail="Song not found")
 
     devices = storage.get_devices()
-    devices_json = [d.model_dump(mode="json") for d in devices]
 
     return templates.TemplateResponse(
         request=request,
         name="song_edit.html",
-        context={"song": song, "devices": devices, "devices_json": devices_json, "is_new": False},
+        context={"song": song, "devices": devices, "is_new": False},
     )
 
 
