@@ -112,6 +112,12 @@ class PacerConfig(BaseModel):
         le=30,
         description="Timeout dla amidi w sekundach",
     )
+    sysex_interval_ms: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Interwał między wiadomościami SysEx w ms (CRITICAL: 20 wymagane!)",
+    )
 
     @field_validator("amidi_port")
     @classmethod

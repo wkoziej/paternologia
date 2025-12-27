@@ -74,3 +74,24 @@ class PacerSysExBuilder:
         payload = c.MANUFACTURER_ID + header + bytes(params)
         cs = checksum(payload)
         return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])
+
+    def build_control_mode(self, control_id: int, mode: int = 0) -> bytes:
+        """Ustaw tryb kontrolki.
+
+        Args:
+            control_id: ID kontrolki (np. STOMPSWITCHES[0] dla SW1)
+            mode: Tryb pracy (0 = All steps in one shot, 1 = Sequence, 2 = External Step Select)
+        """
+        header = bytes([
+            c.DEVICE_ID,
+            c.CMD_SET,
+            c.TARGET_PRESET,
+            self.preset_index,
+            control_id,
+            c.CONTROL_MODE_ELEMENT,
+            0x01,  # length = 1 byte
+            mode
+        ])
+        payload = c.MANUFACTURER_ID + header
+        cs = checksum(payload)
+        return bytes([c.SYSEX_START]) + payload + bytes([cs, c.SYSEX_END])

@@ -37,6 +37,9 @@ def export_song_to_syx(
         control_id = c.STOMPSWITCHES[btn_idx]
         button = song.pacer[btn_idx] if btn_idx < len(song.pacer) else None
 
+        # Control Mode: zawsze "All steps in one shot" (mode=0)
+        messages.append(builder.build_control_mode(control_id, mode=0))
+
         # Zawsze konfiguruj wszystkie 6 kroków (czyszczenie niewykorzystanych)
         for step_idx in range(1, 7):
             if button and step_idx <= len(button.actions):

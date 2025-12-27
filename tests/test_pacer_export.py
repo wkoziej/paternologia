@@ -82,10 +82,10 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Should have preset name + 36 control step messages (6 buttons × 6 steps)
+        # Should have preset name + 6 control modes + 36 control step messages
         # Count F0...F7 pairs
         f0_count = syx.count(bytes([c.SYSEX_START]))
-        assert f0_count == 37  # 1 name + 36 steps
+        assert f0_count == 43  # 1 name + 6 control_mode + 36 steps
 
     def test_export_multiple_actions(self, devices):
         """Export button with multiple actions."""

@@ -7,3 +7,8 @@ amidi_port: hw:6,0,0
 
 # Timeout w sekundach dla polecenia amidi (1-30)
 amidi_timeout_seconds: 5
+
+# CRITICAL: Interwał między wiadomościami SysEx w milisekundach.
+# Pacer wymaga --sysex-interval=20 dla niezawodnego transferu!
+# Bez tego wiadomości mogą być gubione lub uszkodzone.
+sysex_interval_ms: 20

@@ -63,8 +63,9 @@
             <summary class="cursor-pointer hover:text-indigo-600">Usage instructions</summary>
             <ol class="list-decimal list-inside mt-2 space-y-1">
                 <li>List MIDI ports: <code class="bg-gray-100 px-1 rounded">amidi -l</code></li>
-                <li>Send to Pacer: <code class="bg-gray-100 px-1 rounded">amidi -p hw:X,0,0 -s <em>filename.syx</em></code></li>
+                <li>Send to Pacer: <code class="bg-gray-100 px-1 rounded">amidi -p hw:X,0,0 --sysex-interval=20 -s <em>filename.syx</em></code></li>
                 <li>Replace <strong>hw:X,0,0</strong> with your PACER port</li>
+                <li><strong class="text-red-600">CRITICAL:</strong> The <code class="bg-gray-100 px-1 rounded">--sysex-interval=20</code> flag is required!</li>
             </ol>
         </details>
     </div>

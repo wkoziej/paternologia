@@ -107,6 +107,12 @@ Located at `workspace/pacer-editor/` - reference implementation for Nektar Pacer
 
 ## Pacer SysEx Protocol - Critical Information
 
+### CRITICAL: SysEx Timing Requirement
+**ALWAYS use `--sysex-interval=20` when sending SysEx to Pacer!** Without this delay, messages may be lost or corrupted:
+```bash
+amidi -p hw:5,0,0 --sysex-interval=20 -s preset.syx
+```
+
 ### Preset Indices (TARGET_PRESET = 0x01)
 According to `pacer-editor/dumps/README.md`:
 - idx 0x00 = Current (RAM only, changes visible immediately, dots blink)
@@ -120,7 +126,7 @@ Formula: `preset_index = (bank * 6) + col` where bank=0-3 (A-D), col=1-6
 ### SysEx Export - How It Works
 Export writes preset data directly to EEPROM slot (e.g., A1 = idx 0x01):
 ```bash
-amidi -p hw:5,0,0 -s song_A1.syx
+amidi -p hw:5,0,0 --sysex-interval=20 -s song_A1.syx
 ```
 
 **After sending SysEx:**

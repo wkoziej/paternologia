@@ -68,6 +68,7 @@ def send_to_pacer(
 
     port = pacer_config.amidi_port
     timeout_seconds = pacer_config.amidi_timeout_seconds
+    sysex_interval = pacer_config.sysex_interval_ms
 
     devices = storage.get_devices()
     syx_data = export_song_to_syx(song, devices, target)
@@ -76,8 +77,9 @@ def send_to_pacer(
         with NamedTemporaryFile(suffix=".syx", delete=True) as tmp:
             tmp.write(syx_data)
             tmp.flush()
+            # CRITICAL: --sysex-interval is required for reliable transfer!
             run = subprocess.run(
-                ["amidi", "-p", port, "-s", tmp.name],
+                ["amidi", "-p", port, f"--sysex-interval={sysex_interval}", "-s", tmp.name],
                 capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
