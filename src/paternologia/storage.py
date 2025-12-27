@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from paternologia.models import Device, DevicesConfig, Song, SongMetadata
+from paternologia.models import Device, DevicesConfig, PacerConfig, Song, SongMetadata
 
 
 class Storage:
@@ -15,6 +15,7 @@ class Storage:
         self.data_dir = Path(data_dir)
         self.devices_file = self.data_dir / "devices.yaml"
         self.songs_dir = self.data_dir / "songs"
+        self.pacer_config_file = self.data_dir / "pacer.yaml"
 
     def _ensure_dirs(self) -> None:
         """Ensure data directories exist."""
@@ -102,3 +103,24 @@ class Storage:
         """Check if a song with given ID exists."""
         song_file = self.songs_dir / f"{song_id}.yaml"
         return song_file.exists()
+
+    def get_pacer_config(self) -> PacerConfig | None:
+        """Load Pacer configuration from pacer.yaml."""
+        if not self.pacer_config_file.exists():
+            return None
+
+        with open(self.pacer_config_file, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+
+        if not data:
+            return None
+
+        return PacerConfig.model_validate(data)
+
+    def save_pacer_config(self, config: PacerConfig) -> None:
+        """Save Pacer configuration to pacer.yaml."""
+        self._ensure_dirs()
+        data = config.model_dump(mode="json")
+
+        with open(self.pacer_config_file, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)

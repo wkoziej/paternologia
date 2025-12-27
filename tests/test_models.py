@@ -12,6 +12,8 @@ from paternologia.models import (
     Device,
     DevicesConfig,
     PacerButton,
+    PacerConfig,
+    PacerExportSettings,
     Song,
     SongMetadata,
 )
@@ -210,3 +212,108 @@ class TestSong:
                 song=SongMetadata(id="test", name="Test"),
                 pacer=buttons,
             )
+
+
+class TestPacerExportSettings:
+    """Tests for PacerExportSettings model."""
+
+    def test_default_preset(self):
+        """Default target preset is A1."""
+        settings = PacerExportSettings()
+        assert settings.target_preset == "A1"
+
+    def test_valid_preset_a1(self):
+        """A1 preset is valid."""
+        settings = PacerExportSettings(target_preset="A1")
+        assert settings.target_preset == "A1"
+
+    def test_valid_preset_d6(self):
+        """D6 preset is valid."""
+        settings = PacerExportSettings(target_preset="D6")
+        assert settings.target_preset == "D6"
+
+    def test_valid_preset_b3(self):
+        """B3 preset is valid."""
+        settings = PacerExportSettings(target_preset="B3")
+        assert settings.target_preset == "B3"
+
+    def test_invalid_preset_e1(self):
+        """E1 preset is invalid (bank E doesn't exist)."""
+        with pytest.raises(ValidationError) as exc_info:
+            PacerExportSettings(target_preset="E1")
+        assert "target_preset" in str(exc_info.value)
+
+    def test_invalid_preset_a7(self):
+        """A7 preset is invalid (max is 6)."""
+        with pytest.raises(ValidationError) as exc_info:
+            PacerExportSettings(target_preset="A7")
+        assert "target_preset" in str(exc_info.value)
+
+    def test_invalid_preset_random_string(self):
+        """Random string is invalid."""
+        with pytest.raises(ValidationError):
+            PacerExportSettings(target_preset="invalid")
+
+
+class TestPacerConfig:
+    """Tests for PacerConfig model."""
+
+    def test_valid_port(self):
+        """Valid amidi port is accepted."""
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        assert config.amidi_port == "hw:8,0,0"
+        assert config.amidi_timeout_seconds == 5
+
+    def test_valid_port_different_numbers(self):
+        """Port with different numbers is valid."""
+        config = PacerConfig(amidi_port="hw:5,0,0")
+        assert config.amidi_port == "hw:5,0,0"
+
+    def test_custom_timeout(self):
+        """Custom timeout is accepted."""
+        config = PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=10)
+        assert config.amidi_timeout_seconds == 10
+
+    def test_timeout_min_value(self):
+        """Timeout must be at least 1."""
+        with pytest.raises(ValidationError):
+            PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=0)
+
+    def test_timeout_max_value(self):
+        """Timeout cannot exceed 30."""
+        with pytest.raises(ValidationError):
+            PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=31)
+
+    def test_invalid_port_format(self):
+        """Invalid port format is rejected."""
+        with pytest.raises(ValidationError):
+            PacerConfig(amidi_port="invalid")
+
+    def test_invalid_port_missing_hw(self):
+        """Port without hw: prefix is rejected."""
+        with pytest.raises(ValidationError):
+            PacerConfig(amidi_port="8,0,0")
+
+    def test_port_required(self):
+        """Port is required."""
+        with pytest.raises(ValidationError):
+            PacerConfig()
+
+
+class TestSongMetadataWithPacerExport:
+    """Tests for SongMetadata with pacer_export field."""
+
+    def test_default_pacer_export(self):
+        """SongMetadata has default pacer_export."""
+        meta = SongMetadata(id="test", name="Test")
+        assert meta.pacer_export is not None
+        assert meta.pacer_export.target_preset == "A1"
+
+    def test_custom_pacer_export(self):
+        """SongMetadata accepts custom pacer_export."""
+        meta = SongMetadata(
+            id="test",
+            name="Test",
+            pacer_export=PacerExportSettings(target_preset="B3"),
+        )
+        assert meta.pacer_export.target_preset == "B3"

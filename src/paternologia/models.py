@@ -1,11 +1,12 @@
 # ABOUTME: Pydantic models for Paternologia - MIDI device configurations and songs.
 # ABOUTME: Defines Device, Action, PacerButton, DeviceSettings, and Song schemas.
 
+import re
 from datetime import date
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ActionType(str, Enum):
@@ -80,6 +81,47 @@ class PacerButton(BaseModel):
     )
 
 
+VALID_PRESETS = {f"{row}{col}" for row in "ABCD" for col in range(1, 7)}
+
+
+class PacerExportSettings(BaseModel):
+    """Ustawienia eksportu/transferu do Pacera."""
+
+    target_preset: str = Field(
+        default="A1",
+        description="Docelowy preset Pacera (A1-D6)",
+    )
+
+    @field_validator("target_preset")
+    @classmethod
+    def validate_preset(cls, v: str) -> str:
+        """Waliduje, że preset jest w zakresie A1-D6."""
+        v = v.upper()
+        if v not in VALID_PRESETS:
+            raise ValueError(f"Invalid preset: {v}. Valid: A1-D6.")
+        return v
+
+
+class PacerConfig(BaseModel):
+    """Globalna konfiguracja portu amidi."""
+
+    amidi_port: str = Field(..., description="Domyślny port amidi")
+    amidi_timeout_seconds: int = Field(
+        default=5,
+        ge=1,
+        le=30,
+        description="Timeout dla amidi w sekundach",
+    )
+
+    @field_validator("amidi_port")
+    @classmethod
+    def validate_amidi_port(cls, v: str) -> str:
+        """Waliduje format portu amidi (hw:X,Y,Z)."""
+        if not re.match(r"^hw:\d+,\d+,\d+$", v):
+            raise ValueError(f"Invalid amidi port format: {v}. Expected: hw:X,Y,Z")
+        return v
+
+
 class SongMetadata(BaseModel):
     """Song metadata information."""
 
@@ -88,6 +130,10 @@ class SongMetadata(BaseModel):
     author: str = Field(default="", description="Song author")
     created: date = Field(default_factory=date.today, description="Creation date")
     notes: str = Field(default="", description="Additional notes")
+    pacer_export: PacerExportSettings = Field(
+        default_factory=PacerExportSettings,
+        description="Ustawienia eksportu Pacera",
+    )
 
 
 class Song(BaseModel):

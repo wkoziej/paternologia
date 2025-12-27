@@ -2,8 +2,10 @@ song:
   id: zen
   name: Zen
   author: Wojtas
-  created: '2025-12-26'
+  created: '2025-12-27'
   notes: tempo 117 :)
+  pacer_export:
+    target_preset: A3
 pacer:
 - name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
   actions:

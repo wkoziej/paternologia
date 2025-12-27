@@ -12,6 +12,7 @@ from paternologia.models import (
     Action,
     ActionType,
     PacerButton,
+    PacerExportSettings,
     Song,
     SongMetadata,
 )
@@ -157,6 +158,9 @@ def _build_song_from_form(
     devices = storage.get_devices()
     device_ids = [d.id for d in devices]
 
+    target_preset = form_data.get("pacer_export_target_preset", "A1").strip()
+    pacer_export = PacerExportSettings(target_preset=target_preset or "A1")
+
     pacer_buttons = []
     button_idx = 0
 
@@ -215,6 +219,7 @@ def _build_song_from_form(
             author=song_author,
             created=date.today(),
             notes=song_notes,
+            pacer_export=pacer_export,
         ),
         pacer=pacer_buttons,
     )
