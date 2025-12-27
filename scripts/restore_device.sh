@@ -32,7 +32,8 @@ case $DEVICE in
         PACER_PORT=$(amidi -l 2>/dev/null | grep -i pacer | head -1 | awk '{print $2}')
         [ -z "$PACER_PORT" ] && { log "ERROR: Pacer not connected"; exit 1; }
 
-        amidi -p "$PACER_PORT" -s "$BACKUP_DIR/pacer.syx"
+        # CRITICAL: --sysex-interval=20 is required for reliable transfer!
+        amidi -p "$PACER_PORT" --sysex-interval=20 -s "$BACKUP_DIR/pacer.syx"
         log "Pacer restore: OK"
         ;;
 

@@ -585,8 +585,9 @@ app.include_router(pacer.router)
         <summary>Usage</summary>
         <ol>
             <li>List MIDI ports: <code>amidi -l</code></li>
-            <li>Send to Pacer: <code>amidi -p hw:X,0,0 -s <em>filename.syx</em></code></li>
+            <li>Send to Pacer: <code>amidi -p hw:X,0,0 --sysex-interval=20 -s <em>filename.syx</em></code></li>
             <li>Replace <strong>hw:X,0,0</strong> with your PACER port</li>
+            <li><strong>CRITICAL:</strong> The <code>--sysex-interval=20</code> flag is required!</li>
         </ol>
     </details>
 </section>

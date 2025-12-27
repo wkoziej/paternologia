@@ -47,6 +47,8 @@ IO  hw:8,0,1  PACER MIDI2
 
 ## 2. Komendy amidi (DZIAŁA!)
 
+**CRITICAL:** Zawsze używaj `--sysex-interval=20` przy wysyłaniu do Pacera!
+
 ### 2.1 Podstawowe operacje
 
 ```bash
@@ -56,8 +58,8 @@ amidi -l
 # Backup całego Pacera (full dump)
 amidi -p hw:8,0,0 -S "F0 00 01 77 7F 02 7F F7" -r backup.syx -t 10
 
-# Wyślij plik .syx do Pacera
-amidi -p hw:8,0,0 -s preset.syx
+# Wyślij plik .syx do Pacera (CRITICAL: --sysex-interval=20!)
+amidi -p hw:8,0,0 --sysex-interval=20 -s preset.syx
 
 # Wyślij surowe bajty hex
 amidi -p hw:8,0,0 -S "F0 00 01 77 7F 01 01 00 ... F7"
@@ -80,8 +82,8 @@ amidi -p hw:8,0,0 -S "F0 00 01 77 7F 02 7F F7" -r ~/pacer_backup_$(date +%Y%m%d)
 # 2. Eksportuj piosenkę z Paternologii (endpoint do napisania)
 curl -o song.syx http://localhost:8000/pacer/export/w-ciszy.syx?preset=A1
 
-# 3. Wyślij do Pacera
-amidi -p hw:8,0,0 -s song.syx
+# 3. Wyślij do Pacera (CRITICAL: --sysex-interval=20!)
+amidi -p hw:8,0,0 --sysex-interval=20 -s song.syx
 
 # 4. (Opcjonalnie) Podgląd w pacer-editor
 # Przeciągnij song.syx do http://localhost:3000
@@ -345,7 +347,7 @@ npm create vite@latest pacer-editor-modern -- --template react
    - Pobiera plik .syx
 
 3. [Terminal] Wysyła do Pacera przez amidi:
-   amidi -p hw:8,0,0 -s song_B3.syx
+   amidi -p hw:8,0,0 --sysex-interval=20 -s song_B3.syx
 
 4. [Opcjonalnie] Podgląd w pacer-editor:
    - Przeciąga .syx do http://localhost:3000
@@ -360,8 +362,8 @@ npm create vite@latest pacer-editor-modern -- --template react
 # Backup
 amidi -p hw:8,0,0 -S "F0 00 01 77 7F 02 7F F7" -r ~/pacer_backup.syx -t 10
 
-# Restore
-amidi -p hw:8,0,0 -s ~/pacer_backup.syx
+# Restore (CRITICAL: --sysex-interval=20!)
+amidi -p hw:8,0,0 --sysex-interval=20 -s ~/pacer_backup.syx
 ```
 
 ## 5. Struktura plików
@@ -483,7 +485,7 @@ def test_control_step_sysex():
 
 1. Napisz generator `.syx` w Paternologii (~200 linii Python)
 2. Dodaj endpoint `GET /pacer/export/{song_id}.syx`
-3. Dodaj przycisk w UI + instrukcję `amidi -p hw:8,0,0 -s ...`
+3. Dodaj przycisk w UI + instrukcję `amidi -p hw:8,0,0 --sysex-interval=20 -s ...`
 
 ## 10. Źródła i pliki
 

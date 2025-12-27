@@ -29,10 +29,28 @@ MSG_SW_MIDI_CC_TGGLE = 0x47  # CC Toggle dla stompswitch: data1=controller, data
 MSG_SW_MIDI_CC_STEP = 0x48   # CC Step dla stompswitch: data1=controller, data2=start, data3=end
 # MSG_AD_MIDI_CC = 0x00 - NIE UŻYWAĆ dla stompswitch! To jest dla Expression Pedals
 
-# LED colors
-LED_OFF = 0x00
-LED_GREEN = 0x0D
+# LED colors (from pacer-editor dump_format.md)
+# NOTE: 0x7F = OFF (not 0x00! 0x00 is Pink)
+LED_OFF = 0x7F
+LED_PINK = 0x01
 LED_RED = 0x03
+LED_ORANGE = 0x05
+LED_AMBER = 0x07
+LED_YELLOW = 0x09
+LED_LIME = 0x0B
+LED_GREEN = 0x0D
+LED_TEAL = 0x0F
+LED_BLUE = 0x11
+LED_LAVENDER = 0x13
+LED_PURPLE = 0x15
+LED_WHITE = 0x17
+
+# LED element offsets within a step (base + offset)
+# Step 1: 0x40-0x43, Step 2: 0x44-0x47, etc.
+LED_MIDI_CTRL_OFFSET = 0x40
+LED_ACTIVE_COLOR_OFFSET = 0x41
+LED_INACTIVE_COLOR_OFFSET = 0x42
+LED_NUM_OFFSET = 0x43
 
 # Preset indices according to Pacer protocol (from pacer-editor dumps/README.md)
 # idx=0x00 = Current (writes to RAM, visible immediately)
