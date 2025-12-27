@@ -1,4 +1,5 @@
-{# button_idx must be set before including this partial #}
+{# ABOUTME: HTMX partial for PACER button card in song edit form. #}
+{# ABOUTME: button_idx must be set before including this partial. #}
 <div class="pacer-button-card border border-gray-200 rounded-lg p-4">
     <div class="flex justify-between items-center mb-4">
         <div class="flex items-center gap-2">
@@ -21,6 +22,10 @@
         {% endif %}
     </div>
 
-    <button type="button" onclick="addAction(this, {{ button_idx }})"
+    <button type="button"
+            hx-get="/partials/action-row"
+            hx-target="previous .actions-container"
+            hx-swap="beforeend"
+            hx-vals="js:{button_idx: {{ button_idx }}, action_idx: this.closest('.pacer-button-card').querySelectorAll('.action-row').length}"
             class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">+ Dodaj akcję</button>
 </div>

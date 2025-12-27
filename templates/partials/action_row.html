@@ -1,7 +1,13 @@
+{# ABOUTME: HTMX partial for single action row in PACER button. #}
+{# ABOUTME: Uses HTMX cascades for device → types → fields. #}
 <div class="action-row flex gap-2 items-center flex-wrap">
     <select name="button_{{ button_idx }}_action_{{ action_idx }}_device" required
             class="border border-gray-300 rounded px-2 py-1 text-sm"
-            onchange="updateActionTypes(this, {{ button_idx }}, {{ action_idx }})">
+            hx-get="/partials/action-types"
+            hx-target="next .action-type-select"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-vals="js:{device_id: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Urządzenie...</option>
         {% for device in devices %}
         <option value="{{ device.id }}" {% if action and action.device == device.id %}selected{% endif %}>
@@ -12,7 +18,11 @@
 
     <select name="button_{{ button_idx }}_action_{{ action_idx }}_type" required
             class="border border-gray-300 rounded px-2 py-1 text-sm action-type-select"
-            onchange="updateActionFields(this, {{ button_idx }}, {{ action_idx }})">
+            hx-get="/partials/action-fields"
+            hx-target="next .action-fields"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-vals="js:{action_type: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Typ...</option>
         {% if action %}
             {% for device in devices %}
@@ -29,31 +39,8 @@
 
     <div class="action-fields flex gap-2">
         {% if action %}
-            {% if action.type.value == 'preset' %}
-            <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
-                   value="{{ action.value }}" placeholder="Preset #" required
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
-            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
-                   value="{{ action.label or '' }}" placeholder="Label"
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            {% elif action.type.value == 'pattern' %}
-            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
-                   value="{{ action.value }}" placeholder="Pattern" required
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-20">
-            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
-                   value="{{ action.label or '' }}" placeholder="Label"
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            {% elif action.type.value == 'cc' %}
-            <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_cc"
-                   value="{{ action.cc }}" placeholder="CC #" required
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-            <input type="number" name="button_{{ button_idx }}_action_{{ action_idx }}_value"
-                   value="{{ action.value }}" placeholder="Value" required min="0" max="127"
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-16">
-            <input type="text" name="button_{{ button_idx }}_action_{{ action_idx }}_label"
-                   value="{{ action.label or '' }}" placeholder="Label"
-                   class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-            {% endif %}
+            {% set action_type = action.type.value %}
+            {% include "partials/action_fields.html" with context %}
         {% endif %}
     </div>
 
