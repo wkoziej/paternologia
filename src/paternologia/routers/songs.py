@@ -2,9 +2,8 @@
 # ABOUTME: Provides CRUD endpoints for song configurations with HTMX support.
 
 from datetime import date
-from typing import Annotated
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from paternologia.dependencies import get_storage, get_templates
