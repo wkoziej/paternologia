@@ -472,3 +472,115 @@ class TestPacerSendEndpoint:
 
             assert response.status_code == 500
             assert "amidi failed" in response.json()["detail"]
+
+
+class TestHTMXPartials:
+    """Tests for HTMX partial endpoints."""
+
+    def test_get_pacer_button_partial(self, client, sample_devices):
+        """GET /partials/pacer-button returns valid HTML partial."""
+        response = client.get("/partials/pacer-button?button_idx=0")
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert 'name="button_0_name"' in response.text
+        assert "pacer-button-card" in response.text
+
+    def test_get_pacer_button_partial_with_index(self, client, sample_devices):
+        """Button index is reflected in input names."""
+        response = client.get("/partials/pacer-button?button_idx=3")
+
+        assert response.status_code == 200
+        assert 'name="button_3_name"' in response.text
+        assert "#4" in response.text  # button_idx + 1
+
+    def test_get_action_row_partial(self, client, sample_devices):
+        """GET /partials/action-row returns valid HTML partial."""
+        response = client.get("/partials/action-row?button_idx=0&action_idx=0")
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert 'name="button_0_action_0_device"' in response.text
+        assert "action-row" in response.text
+
+    def test_get_action_row_partial_with_indices(self, client, sample_devices):
+        """Action indices are reflected in input names."""
+        response = client.get("/partials/action-row?button_idx=2&action_idx=4")
+
+        assert response.status_code == 200
+        assert 'name="button_2_action_4_device"' in response.text
+        assert 'name="button_2_action_4_type"' in response.text
+
+    def test_get_action_types_partial(self, client, sample_devices):
+        """GET /partials/action-types returns options for device."""
+        response = client.get(
+            "/partials/action-types?device_id=boss&button_idx=0&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        # boss supports preset and cc
+        assert "preset" in response.text.lower()
+        assert "cc" in response.text.lower()
+        # boss does NOT support pattern
+        assert "pattern" not in response.text.lower()
+
+    def test_get_action_types_partial_pattern_device(self, client, sample_devices):
+        """Action types for pattern-only device."""
+        response = client.get(
+            "/partials/action-types?device_id=ms&button_idx=0&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        # ms (Model:Samples) only supports pattern
+        assert "pattern" in response.text.lower()
+        assert "preset" not in response.text.lower()
+
+    def test_get_action_types_partial_unknown_device(self, client, sample_devices):
+        """Action types for unknown device returns empty."""
+        response = client.get(
+            "/partials/action-types?device_id=unknown&button_idx=0&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        # Should return empty or just placeholder option
+        assert "preset" not in response.text.lower()
+
+    def test_get_action_fields_partial_preset(self, client, sample_devices):
+        """GET /partials/action-fields for preset type."""
+        response = client.get(
+            "/partials/action-fields?action_type=preset&button_idx=0&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        # Preset needs value and optional label
+        assert 'name="button_0_action_0_value"' in response.text
+        assert 'name="button_0_action_0_label"' in response.text
+        # Preset does NOT need cc
+        assert 'name="button_0_action_0_cc"' not in response.text
+
+    def test_get_action_fields_partial_cc(self, client, sample_devices):
+        """GET /partials/action-fields for cc type."""
+        response = client.get(
+            "/partials/action-fields?action_type=cc&button_idx=1&action_idx=2"
+        )
+
+        assert response.status_code == 200
+        # CC needs cc number, value, and optional label
+        assert 'name="button_1_action_2_cc"' in response.text
+        assert 'name="button_1_action_2_value"' in response.text
+        assert 'name="button_1_action_2_label"' in response.text
+
+    def test_get_action_fields_partial_pattern(self, client, sample_devices):
+        """GET /partials/action-fields for pattern type."""
+        response = client.get(
+            "/partials/action-fields?action_type=pattern&button_idx=0&action_idx=0"
+        )
+
+        assert response.status_code == 200
+        # Pattern needs value (text) and optional label
+        assert 'name="button_0_action_0_value"' in response.text
+        assert 'name="button_0_action_0_label"' in response.text
+        # Pattern does NOT need cc
+        assert 'name="button_0_action_0_cc"' not in response.text

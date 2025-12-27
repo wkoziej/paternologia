@@ -261,3 +261,45 @@ async def get_pacer_button(request: Request, button_idx: int):
             "is_edit": True,
         },
     )
+
+
+@router.get("/partials/action-types", response_class=HTMLResponse)
+async def get_action_types(
+    request: Request, device_id: str, button_idx: int, action_idx: int
+):
+    """Return action type options for selected device (HTMX cascade)."""
+    storage = get_storage()
+    templates = get_templates()
+    devices = storage.get_devices()
+
+    device = next((d for d in devices if d.id == device_id), None)
+    action_types = device.action_types if device else []
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/action_types.html",
+        context={
+            "button_idx": button_idx,
+            "action_idx": action_idx,
+            "action_types": action_types,
+        },
+    )
+
+
+@router.get("/partials/action-fields", response_class=HTMLResponse)
+async def get_action_fields(
+    request: Request, action_type: str, button_idx: int, action_idx: int
+):
+    """Return input fields for selected action type (HTMX cascade)."""
+    templates = get_templates()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/action_fields.html",
+        context={
+            "button_idx": button_idx,
+            "action_idx": action_idx,
+            "action_type": action_type,
+            "action": None,
+        },
+    )
