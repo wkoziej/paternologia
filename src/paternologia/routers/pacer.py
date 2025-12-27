@@ -4,8 +4,8 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import Response, HTMLResponse
 
 from ..dependencies import get_storage
 from ..models import VALID_PRESETS
@@ -47,6 +47,7 @@ def export_syx(
 
 @router.post("/send/{song_id}")
 def send_to_pacer(
+    request: Request,
     song_id: str,
     preset: str | None = None,
     storage: Storage = Depends(get_storage)
@@ -90,5 +91,12 @@ def send_to_pacer(
 
     if run.returncode != 0:
         raise HTTPException(500, f"amidi failed: {run.stderr.strip()}")
+
+    # Return HTML for HTMX requests, JSON for API clients
+    is_htmx = request.headers.get("HX-Request") == "true"
+    if is_htmx:
+        return HTMLResponse(
+            f'<span class="text-green-600">Wysłano do preset {target} na port {port}</span>'
+        )
 
     return {"status": "ok", "preset": target, "port": port}
