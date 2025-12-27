@@ -51,8 +51,8 @@ amidi -p $PACER_PORT -S "F0 00 01 77 7F 02 7F F7" \
 ### 2.3 Restore
 
 ```bash
-# Wyślij zapisany dump do Pacera
-amidi -p $PACER_PORT -s ~/backup/pacer_20241225_120000.syx
+# Wyślij zapisany dump do Pacera (CRITICAL: --sysex-interval=20!)
+amidi -p $PACER_PORT --sysex-interval=20 -s ~/backup/pacer_20241225_120000.syx
 ```
 
 ### 2.4 Co jest backupowane
@@ -467,7 +467,8 @@ case $DEVICE in
         log "Restoring Pacer from $BACKUP_DIR/pacer.syx"
         PACER_PORT=$(amidi -l | grep -i pacer | head -1 | awk '{print $2}')
         [ -z "$PACER_PORT" ] && { log "ERROR: Pacer not connected"; exit 1; }
-        amidi -p "$PACER_PORT" -s "$BACKUP_DIR/pacer.syx"
+        # CRITICAL: --sysex-interval=20 is required for reliable transfer!
+        amidi -p "$PACER_PORT" --sysex-interval=20 -s "$BACKUP_DIR/pacer.syx"
         log "Pacer restore: OK"
         ;;
 

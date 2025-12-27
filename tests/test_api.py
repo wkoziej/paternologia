@@ -7,9 +7,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from unittest.mock import patch, MagicMock
+
 from paternologia import dependencies
 from paternologia.main import app
-from paternologia.models import ActionType, Device
+from paternologia.models import ActionType, Device, PacerConfig, PacerExportSettings
 from paternologia.storage import Storage
 
 
@@ -278,3 +280,195 @@ class TestSongWithPacerButtons:
         assert song.pacer[0].name == "Start"
         assert len(song.pacer[0].actions) == 1
         assert song.pacer[0].actions[0].value == 5
+
+
+class TestSongPacerExport:
+    """Tests for pacer_export field in song creation/update."""
+
+    def test_create_song_with_pacer_export(self, client, sample_devices, test_storage):
+        """Create song with custom pacer export settings."""
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "with-export",
+                "song_name": "Song With Export",
+                "song_author": "",
+                "song_notes": "",
+                "pacer_export_target_preset": "C4",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("with-export")
+        assert song is not None
+        assert song.song.pacer_export.target_preset == "C4"
+
+    def test_create_song_default_pacer_export(self, client, sample_devices, test_storage):
+        """Create song without explicit pacer export gets default."""
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "no-export",
+                "song_name": "Song Without Export",
+                "song_author": "",
+                "song_notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("no-export")
+        assert song is not None
+        assert song.song.pacer_export.target_preset == "A1"
+
+
+class TestPacerSendEndpoint:
+    """Tests for POST /pacer/send/{song_id} endpoint."""
+
+    def test_send_to_pacer_success(self, client, sample_devices, test_storage):
+        """Successfully sends .syx to Pacer via amidi."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            response = client.post("/pacer/send/test")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "ok"
+            assert data["preset"] == "A1"
+            assert data["port"] == "hw:8,0,0"
+
+            mock_run.assert_called_once()
+            call_args = mock_run.call_args[0][0]
+            assert call_args[0] == "amidi"
+            assert "-p" in call_args
+            assert "hw:8,0,0" in call_args
+            assert "-s" in call_args
+
+    def test_send_to_pacer_custom_preset(self, client, sample_devices, test_storage):
+        """Sends .syx with custom preset override."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            response = client.post("/pacer/send/test?preset=B3")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["preset"] == "B3"
+
+    def test_send_to_pacer_uses_song_default_preset(self, client, sample_devices, test_storage):
+        """Uses song's default preset when not specified in query."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(
+            song=SongMetadata(
+                id="test",
+                name="Test Song",
+                pacer_export=PacerExportSettings(target_preset="C4"),
+            )
+        )
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            response = client.post("/pacer/send/test")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["preset"] == "C4"
+
+    def test_send_to_pacer_song_not_found(self, client, sample_devices, test_storage):
+        """Returns 404 when song doesn't exist."""
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        response = client.post("/pacer/send/nonexistent")
+        assert response.status_code == 404
+
+    def test_send_to_pacer_missing_config(self, client, sample_devices, test_storage):
+        """Returns 400 when pacer.yaml is missing."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        response = client.post("/pacer/send/test")
+        assert response.status_code == 400
+        assert "pacer.yaml" in response.json()["detail"]
+
+    def test_send_to_pacer_invalid_preset(self, client, sample_devices, test_storage):
+        """Returns 400 for invalid preset."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        response = client.post("/pacer/send/test?preset=E1")
+        assert response.status_code == 400
+        assert "Invalid preset" in response.json()["detail"]
+
+    def test_send_to_pacer_amidi_not_found(self, client, sample_devices, test_storage):
+        """Returns 500 when amidi is not installed."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            response = client.post("/pacer/send/test")
+
+            assert response.status_code == 500
+            assert "amidi not found" in response.json()["detail"]
+
+    def test_send_to_pacer_amidi_failure(self, client, sample_devices, test_storage):
+        """Returns 500 when amidi command fails."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        test_storage.save_pacer_config(config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = "Device not found"
+
+        with patch("subprocess.run", return_value=mock_result):
+            response = client.post("/pacer/send/test")
+
+            assert response.status_code == 500
+            assert "amidi failed" in response.json()["detail"]

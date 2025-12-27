@@ -12,6 +12,7 @@ from paternologia.models import (
     ActionType,
     Device,
     PacerButton,
+    PacerConfig,
     Song,
     SongMetadata,
 )
@@ -204,3 +205,38 @@ class TestStorageDirectoryCreation:
         """Saving automatically creates directories."""
         temp_storage.save_song(sample_song)
         assert temp_storage.songs_dir.exists()
+
+
+class TestPacerConfigStorage:
+    """Tests for PacerConfig YAML storage."""
+
+    def test_get_pacer_config_returns_none_when_missing(self, temp_storage):
+        """Returns None when pacer.yaml doesn't exist."""
+        config = temp_storage.get_pacer_config()
+        assert config is None
+
+    def test_save_and_get_pacer_config(self, temp_storage):
+        """PacerConfig can be saved and loaded."""
+        config = PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=10)
+        temp_storage.save_pacer_config(config)
+
+        loaded = temp_storage.get_pacer_config()
+        assert loaded is not None
+        assert loaded.amidi_port == "hw:8,0,0"
+        assert loaded.amidi_timeout_seconds == 10
+
+    def test_pacer_config_file_location(self, temp_storage):
+        """PacerConfig is saved to data/pacer.yaml."""
+        config = PacerConfig(amidi_port="hw:5,0,0")
+        temp_storage.save_pacer_config(config)
+
+        pacer_file = temp_storage.data_dir / "pacer.yaml"
+        assert pacer_file.exists()
+
+    def test_get_pacer_config_with_default_timeout(self, temp_storage):
+        """PacerConfig uses default timeout when not specified."""
+        config = PacerConfig(amidi_port="hw:8,0,0")
+        temp_storage.save_pacer_config(config)
+
+        loaded = temp_storage.get_pacer_config()
+        assert loaded.amidi_timeout_seconds == 5
