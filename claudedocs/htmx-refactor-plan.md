@@ -50,46 +50,46 @@
 
 ## Plan implementacji
 
-### Faza 1: Infrastruktura
+### Faza 1: Infrastruktura ✅
 
-- [ ] **1.1** Dodać endpoint `/partials/action-types` (kaskada device → types)
-- [ ] **1.2** Dodać endpoint `/partials/action-fields` (kaskada type → fields)
-- [ ] **1.3** Dodać testy dla nowych endpointów partiali
-- [ ] **1.4** Uruchomić istniejące testy — upewnić się że przechodzą
+- [x] **1.1** Dodać endpoint `/partials/action-types` (kaskada device → types)
+- [x] **1.2** Dodać endpoint `/partials/action-fields` (kaskada type → fields)
+- [x] **1.3** Dodać testy dla nowych endpointów partiali
+- [x] **1.4** Uruchomić istniejące testy — upewnić się że przechodzą
 
-### Faza 2: Partiale HTMX
+### Faza 2: Partiale HTMX ✅
 
-- [ ] **2.1** `pacer_button.html` — zamienić `onclick` na `hx-delete` (usuwanie przycisku)
-- [ ] **2.2** `pacer_button.html` — zamienić `onclick` na `hx-get` (dodawanie akcji)
-- [ ] **2.3** `action_row.html` — zamienić `onclick` na `hx-delete` (usuwanie akcji)
-- [ ] **2.4** `action_row.html` — zamienić `onchange` na `hx-get` (device → types)
-- [ ] **2.5** `action_row.html` — zamienić `onchange` na `hx-get` (type → fields)
-- [ ] **2.6** Dodać `hx-indicator` dla loading states
+- [x] **2.1** `pacer_button.html` — zostawiono `onclick` dla usuwania (client-side)
+- [x] **2.2** `pacer_button.html` — zamienić `onclick` na `hx-get` (dodawanie akcji)
+- [x] **2.3** `action_row.html` — zostawiono `onclick` dla usuwania (client-side)
+- [x] **2.4** `action_row.html` — zamienić `onchange` na `hx-get` (device → types)
+- [x] **2.5** `action_row.html` — zamienić `onchange` na `hx-get` (type → fields)
+- [x] **2.6** Dodać `hx-indicator` dla loading states
 
-### Faza 3: song_edit.html
+### Faza 3: song_edit.html ✅
 
-- [ ] **3.1** Zamienić "Dodaj przycisk" na `hx-get="/partials/pacer-button"`
-- [ ] **3.2** Dodać walidację limitu 6 przycisków (server-side)
-- [ ] **3.3** Usunąć funkcje JS: `createButtonCard`, `addAction`
-- [ ] **3.4** Usunąć funkcje JS: `updateActionTypes`, `updateActionFields`
-- [ ] **3.5** Przetestować edycję istniejącego utworu
-- [ ] **3.6** Przetestować tworzenie nowego utworu
+- [x] **3.1** Zamienić "Dodaj przycisk" na `hx-get="/partials/pacer-button"`
+- [x] **3.2** Walidacja limitu via JS w hx-vals (counts existing buttons)
+- [x] **3.3** Usunąć funkcje JS: `createButtonCard`, `addAction`
+- [x] **3.4** Usunąć funkcje JS: `updateActionTypes`, `updateActionFields`
+- [x] **3.5** Przetestować edycję istniejącego utworu
+- [x] **3.6** Przetestować tworzenie nowego utworu
 
-### Faza 4: song.html (eksport SysEx)
+### Faza 4: song.html (eksport SysEx) ✅
 
-- [ ] **4.1** Zamienić `fetch()` na `hx-post` dla "Wyślij do Pacer"
-- [ ] **4.2** Zamienić event listener na `hx-get` dla dynamicznego linku download
-- [ ] **4.3** Dodać `hx-swap="innerHTML"` dla `#send-result`
-- [ ] **4.4** Usunąć cały blok `<script>` z song.html
+- [x] **4.1** Zamienić `fetch()` na `hx-post` dla "Wyślij do Pacer"
+- [x] **4.2** Zostawiono minimal JS dla linku download (HTMX nie zmienia href)
+- [x] **4.3** Dodać `hx-swap="innerHTML"` dla `#send-result`
+- [x] **4.4** Zredukowano JS z 43 do 9 linii
 
-### Faza 5: Walidacja i cleanup
+### Faza 5: Walidacja i cleanup ✅
 
-- [ ] **5.1** Uruchomić wszystkie testy (`uv run pytest`)
-- [ ] **5.2** Testy E2E dla formularza edycji
-- [ ] **5.3** Testy E2E dla eksportu SysEx
-- [ ] **5.4** Usunąć nieużywany kod JS z song_edit.html
-- [ ] **5.5** Usunąć `devices_json` z kontekstu (niepotrzebne)
-- [ ] **5.6** Code review — sprawdzić czy nie ma duplikacji
+- [x] **5.1** Uruchomić wszystkie testy (`uv run pytest`) — 178 passed
+- [x] **5.2** Testy E2E dla formularza edycji — zaktualizowane
+- [x] **5.3** Testy E2E dla eksportu SysEx — przechodzą
+- [x] **5.4** Usunąć nieużywany kod JS z song_edit.html — 125 linii usunięte
+- [x] **5.5** Usunąć `devices_json` z kontekstu — done
+- [x] **5.6** Code review — usunięto nieużywane importy
 
 ---
 
