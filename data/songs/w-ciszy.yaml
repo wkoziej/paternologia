@@ -2,7 +2,7 @@ song:
   id: w-ciszy
   name: cisza
   author: Wojtas
-  created: '2025-12-27'
+  created: '2025-12-28'
   notes: tempo 117 :)
   pacer_export:
     target_preset: A1
@@ -13,7 +13,7 @@ pacer:
     type: preset
     value: 0
     cc: null
-    label: 'nazwa: W ciszy'
+    label: W ciszy
     bank_lsb: 0
     bank_msb: 0
   - device: freak
@@ -43,7 +43,7 @@ pacer:
     type: pattern
     value: A02
     cc: null
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
   - device: boss
@@ -59,14 +59,14 @@ pacer:
     type: cc
     value: 1
     cc: 3
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
   - device: ms
     type: pattern
     value: a03
     cc: null
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
 - name: '4'
@@ -75,6 +75,6 @@ pacer:
     type: cc
     value: 1
     cc: 4
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
