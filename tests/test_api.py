@@ -371,7 +371,7 @@ class TestPacerSendEndpoint:
         mock_result.stderr = ""
 
         with patch("subprocess.run", return_value=mock_result):
-            response = client.post("/pacer/send/test?preset=B3")
+            response = client.post("/pacer/send/test", data={"preset": "B3"})
 
             assert response.status_code == 200
             data = response.json()
@@ -433,7 +433,7 @@ class TestPacerSendEndpoint:
         config = PacerConfig(amidi_port="hw:8,0,0")
         test_storage.save_pacer_config(config)
 
-        response = client.post("/pacer/send/test?preset=E1")
+        response = client.post("/pacer/send/test", data={"preset": "E1"})
         assert response.status_code == 400
         assert "Invalid preset" in response.json()["detail"]
 

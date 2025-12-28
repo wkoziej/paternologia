@@ -4,7 +4,7 @@
 import subprocess
 from tempfile import NamedTemporaryFile
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from fastapi.responses import Response, HTMLResponse
 
 from ..dependencies import get_storage
@@ -49,7 +49,7 @@ def export_syx(
 def send_to_pacer(
     request: Request,
     song_id: str,
-    preset: str | None = None,
+    preset: str | None = Form(None),
     storage: Storage = Depends(get_storage)
 ):
     """Wyślij piosenkę do Pacera przez amidi."""

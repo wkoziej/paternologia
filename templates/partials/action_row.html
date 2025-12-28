@@ -7,6 +7,7 @@
             hx-target="next .action-type-select"
             hx-swap="innerHTML"
             hx-trigger="change"
+            hx-indicator="#loading-indicator"
             hx-vals="js:{device_id: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Urządzenie...</option>
         {% for device in devices %}
@@ -22,6 +23,7 @@
             hx-target="next .action-fields"
             hx-swap="innerHTML"
             hx-trigger="change"
+            hx-indicator="#loading-indicator"
             hx-vals="js:{action_type: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Typ...</option>
         {% if action %}

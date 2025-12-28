@@ -132,6 +132,12 @@ async def update_song(request: Request, song_id: str):
     return RedirectResponse(url=f"/songs/{song_id}", status_code=303)
 
 
+@router.post("/songs/{song_id}", response_class=HTMLResponse)
+async def update_song_post(request: Request, song_id: str):
+    """Update song via POST (progressive enhancement fallback for browsers without JS)."""
+    return await update_song(request, song_id)
+
+
 @router.delete("/songs/{song_id}")
 async def delete_song(song_id: str):
     """Delete a song."""

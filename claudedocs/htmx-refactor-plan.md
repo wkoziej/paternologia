@@ -168,11 +168,41 @@ Uwaga: Usuwanie jest client-side (HTMX `remove`), nie wymaga requestu.
 
 ## Definition of Done
 
-1. ✅ Wszystkie testy przechodzą
-2. ✅ Brak inline JavaScript w szablonach (z wyjątkiem htmx config)
+1. ✅ Wszystkie testy przechodzą (178 passed)
+2. ✅ Brak inline JavaScript w szablonach (z wyjątkiem htmx config i minimal JS)
 3. ✅ Formularze działają identycznie jak przed refaktoryzacją
 4. ✅ Loading indicators widoczne przy operacjach
 5. ✅ Code review zakończony
+
+## Faza 6: Post-completion fixes ✅
+
+- [x] **6.1** Dodać `hx-indicator` dla dodawania przycisku w `song_edit.html`
+- [x] **6.2** Dodać `hx-indicator` dla kaskad device→types i type→fields w `action_row.html`
+- [x] **6.3** Naprawić `/pacer/send` - zmienić `preset` z query param na `Form` body param
+- [x] **6.4** Zaktualizować testy `test_send_to_pacer_*` do wysyłania Form data
+- [x] **6.5** Dodać POST endpoint `/songs/{song_id}` dla progressive enhancement (fallback bez JS)
+- [x] **6.6** Uruchomić wszystkie testy — 178 passed
+
+### Opis zmian Fazy 6
+
+**Problem 1: Brak loading indicators**
+- `song_edit.html:89` - dodano `<span id="loading-indicator" class="htmx-indicator">⏳</span>`
+- `song_edit.html:85` - dodano `hx-indicator="#loading-indicator"` dla przycisku "Dodaj przycisk"
+- `action_row.html:10,26` - dodano `hx-indicator="#loading-indicator"` dla kaskad device→types i type→fields
+
+**Problem 2: Preset w /pacer/send ignorowany**
+- `pacer.py:52` - zmieniono `preset: str | None = None` na `preset: str | None = Form(None)`
+- Frontend wysyłał `hx-vals` (body), backend czekał na query param → preset był ignorowany
+- Teraz preset z selecta w `song.html:59` trafia do backendu
+
+**Problem 3: Progressive enhancement dla edycji**
+- `songs.py:135-138` - dodano `POST /songs/{song_id}` endpoint jako fallback dla `PUT`
+- Formularz ma `method="post"`, więc bez JS działa (progressive enhancement)
+- Endpoint deleguje do `update_song()` (DRY)
+
+**Testy zaktualizowane:**
+- `test_api.py:374` - `?preset=B3` → `data={"preset": "B3"}`
+- `test_api.py:436` - `?preset=E1` → `data={"preset": "E1"}`
 
 ---
 
