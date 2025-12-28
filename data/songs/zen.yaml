@@ -13,7 +13,7 @@ pacer:
     type: preset
     value: 2
     cc: null
-    label: 'nazwa: W ciszy'
+    label: 'W ciszy'
     bank_lsb: 0
     bank_msb: 0
   - device: freak

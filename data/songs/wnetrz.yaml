@@ -1,0 +1,25 @@
+song:
+  id: wnetrz
+  name: Wnętrze
+  author: ''
+  created: '2025-12-27'
+  notes: ''
+  pacer_export:
+    target_preset: A2
+pacer:
+- name: Uruchomienie beatów i gotowości nagrywania. M:S gra na Freaku
+  actions:
+  - device: ms
+    type: pattern
+    value: b0
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+  - device: boss
+    type: preset
+    value: 1
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0

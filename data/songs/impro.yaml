@@ -1,0 +1,39 @@
+song:
+  id: impro
+  name: Impro
+  author: ''
+  created: '2025-12-27'
+  notes: ''
+  pacer_export:
+    target_preset: A4
+pacer:
+- name: Start
+  actions:
+  - device: boss
+    type: preset
+    value: 6
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+  - device: ms
+    type: pattern
+    value: D1
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+  - device: freak
+    type: preset
+    value: 135
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
