@@ -141,16 +141,16 @@ class TestActionToMidiCC:
     """Tests for CC action conversion."""
 
     def test_cc_action(self):
-        """CC action converts to MSG_SW_MIDI_CC_TGGLE (toggle 127/0)."""
+        """CC action converts to MSG_SW_MIDI_CC (trigger down=127, up=0)."""
         action = Action(device="boss", type=ActionType.CC, cc=74, value=127)
         channel_map = {"boss": 0}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_SW_MIDI_CC_TGGLE
+        assert msg_type == c.MSG_SW_MIDI_CC
         assert channel == 0
         assert data1 == 74  # CC number
-        assert data2 == 127  # value1 (ON)
-        assert data3 == 0    # value2 (OFF)
+        assert data2 == 127  # down (naciśnięcie)
+        assert data3 == 0    # up (puszczenie)
 
     def test_cc_different_channel(self):
         """CC action on different channel."""
@@ -158,10 +158,10 @@ class TestActionToMidiCC:
         channel_map = {"freak": 5}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_SW_MIDI_CC_TGGLE
+        assert msg_type == c.MSG_SW_MIDI_CC
         assert channel == 5
-        assert data2 == 64  # value1 (ON)
-        assert data3 == 0   # value2 (OFF)
+        assert data2 == 64  # down (naciśnięcie)
+        assert data3 == 0   # up (puszczenie)
 
 
 class TestActionToMidiUnknownDevice:

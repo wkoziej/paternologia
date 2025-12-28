@@ -25,6 +25,7 @@ CONTROL_MODE_ELEMENT = 0x60  # Element dla trybu kontrolki
 MSG_CTRL_OFF = 0x61       # Kontrolka wyłączona
 MSG_SW_PRG_BANK = 0x45    # Program Change + Bank: data1=program, data2=bank LSB, data3=bank MSB
 MSG_SW_PRG_STEP = 0x46    # Program Step: data1=unused, data2=start, data3=end (start=end dla immediate)
+MSG_SW_MIDI_CC = 0x40     # CC Trigger dla stompswitch: data1=controller, data2=down, data3=up
 MSG_SW_MIDI_CC_TGGLE = 0x47  # CC Toggle dla stompswitch: data1=controller, data2=value1, data3=value2
 MSG_SW_MIDI_CC_STEP = 0x48   # CC Step dla stompswitch: data1=controller, data2=start, data3=end
 # MSG_AD_MIDI_CC = 0x00 - NIE UŻYWAĆ dla stompswitch! To jest dla Expression Pedals

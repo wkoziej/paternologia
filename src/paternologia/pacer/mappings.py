@@ -58,7 +58,7 @@ def action_to_midi(
         (msg_type, channel, data1, data2, data3)
 
     Dla MSG_SW_PRG_STEP: data1=unused, data2=start, data3=end (start=end dla immediate)
-    Dla MSG_SW_MIDI_CC_TGGLE: data1=controller, data2=value1 (ON), data3=value2 (OFF)
+    Dla MSG_SW_MIDI_CC: data1=controller, data2=down (naciśnięcie), data3=up (puszczenie)
     """
     channel = get_device_channel(action.device, device_channel_map)
 
@@ -81,11 +81,11 @@ def action_to_midi(
         return (c.MSG_SW_PRG_STEP, channel, 0, program, program)
 
     elif action.type == ActionType.CC:
-        # CC Toggle dla stompswitch: data1=controller, data2=value1, data3=value2
-        # Wysyła naprzemiennie value1/value2 przy kolejnych naciśnięciach
-        # Dla RC-600 w trybie MOMENT: 127=ON, 0=OFF
+        # CC Trigger dla stompswitch: data1=controller, data2=down, data3=up
+        # Wysyła wartość "down" przy naciśnięciu przycisku, "up" przy puszczeniu
+        # Dla RC-600 w trybie MOMENT: down=127 (ON), up=0 (OFF)
         cc_value = action.value if isinstance(action.value, int) else 127
-        return (c.MSG_SW_MIDI_CC_TGGLE, channel, action.cc or 0, cc_value, 0)
+        return (c.MSG_SW_MIDI_CC, channel, action.cc or 0, cc_value, 0)
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")
