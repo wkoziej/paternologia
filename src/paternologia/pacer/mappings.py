@@ -24,12 +24,22 @@ def get_device_channel(device_id: str, channel_map: dict[str, int]) -> int:
 def pattern_to_program(value: int | str | None) -> int:
     """Konwertuj pattern ID na Program Change number.
 
-    M:S: A01-A16 (0-15), B01-B16 (16-31), ..., F01-F16 (80-95)
+    Obsługuje formaty:
+    - int: bezpośrednio jako program number (np. 77 → 77)
+    - str numeryczny: konwertuje na int (np. "77" → 77)
+    - str alfanumeryczny: M:S format A01-F16 (np. "D1" → 48)
+
+    M:S mapping: A01-A16 (0-15), B01-B16 (16-31), ..., F01-F16 (80-95)
     """
     if isinstance(value, int):
         return value
     if isinstance(value, str):
-        # Format "A01", "B02", etc.
+        # Najpierw sprawdź czy to czysta liczba (np. "77")
+        try:
+            return int(value)
+        except ValueError:
+            pass
+        # Format "A01", "B02", "D1", etc.
         if len(value) >= 2 and value[0].isalpha():
             bank = ord(value[0].upper()) - ord('A')  # A=0, B=1, ..., F=5
             if bank < 0 or bank > 5:
