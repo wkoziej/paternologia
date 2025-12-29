@@ -8,7 +8,7 @@
             hx-swap="innerHTML"
             hx-trigger="change"
             hx-indicator="#loading-indicator"
-            hx-vals="js:{device_id: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
+            hx-vals="js:{device_id: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Urządzenie...</option>
         {% for device in devices %}
         <option value="{{ device.id }}" {% if action and action.device == device.id %}selected{% endif %}>
@@ -24,7 +24,7 @@
             hx-swap="innerHTML"
             hx-trigger="change"
             hx-indicator="#loading-indicator"
-            hx-vals="js:{action_type: this.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
+            hx-vals="js:{action_type: event.target.value, button_idx: {{ button_idx }}, action_idx: {{ action_idx }}}">
         <option value="">Typ...</option>
         {% if action %}
             {% for device in devices %}
