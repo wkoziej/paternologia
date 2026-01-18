@@ -95,8 +95,7 @@ def send_to_pacer(
             error_msg = "Song not found"
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
-                    status_code=404
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
                 )
             raise HTTPException(404, error_msg)
 
@@ -107,8 +106,7 @@ def send_to_pacer(
             error_msg = f"Invalid preset: {target}. Valid: A1-D6."
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
-                    status_code=400
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
                 )
             raise HTTPException(400, error_msg)
 
@@ -117,8 +115,7 @@ def send_to_pacer(
             error_msg = "Missing configuration in data/pacer.yaml"
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
-                    status_code=400
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
                 )
             raise HTTPException(400, error_msg)
 
@@ -131,8 +128,7 @@ def send_to_pacer(
             )
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
-                    status_code=400
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
                 )
             raise HTTPException(400, error_msg)
 
@@ -158,8 +154,7 @@ def send_to_pacer(
             error_msg = "amidi not found - install alsa-utils package"
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
-                    status_code=500
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>'
                 )
             raise HTTPException(500, error_msg)
 
@@ -168,8 +163,7 @@ def send_to_pacer(
             logger.error(f"amidi failed for {song_id} to {target}: {error_msg}")
             if is_htmx:
                 return HTMLResponse(
-                    f'<span class="text-red-600 font-semibold">❌ Błąd wysyłania: {error_msg}</span>',
-                    status_code=400
+                    f'<span class="text-red-600 font-semibold">❌ Błąd wysyłania: {error_msg}</span>'
                 )
             raise HTTPException(400, f"amidi failed: {error_msg}")
 
@@ -185,7 +179,6 @@ def send_to_pacer(
         error_msg = str(e)
         if is_htmx:
             return HTMLResponse(
-                f'<span class="text-red-600 font-semibold">❌ Błąd: {error_msg}</span>',
-                status_code=500
+                f'<span class="text-red-600 font-semibold">❌ Błąd: {error_msg}</span>'
             )
         raise HTTPException(500, f"Internal error: {error_msg}")
