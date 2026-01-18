@@ -2,6 +2,7 @@
 # ABOUTME: Provides GET /pacer/export/{song_id}.syx and POST /pacer/send/{song_id}.
 
 import subprocess
+import logging
 from tempfile import NamedTemporaryFile
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
@@ -12,6 +13,8 @@ from ..models import VALID_PRESETS
 from ..storage import Storage
 from ..pacer.export import export_song_to_syx
 from ..pacer import constants as c
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pacer", tags=["pacer"])
 
@@ -84,58 +87,105 @@ def send_to_pacer(
     storage: Storage = Depends(get_storage)
 ):
     """Wyślij piosenkę do Pacera przez amidi."""
-    song = storage.get_song(song_id)
-    if not song:
-        raise HTTPException(404, "Song not found")
-
-    target = preset or song.song.pacer_export.target_preset
-    target = target.upper()
-
-    if target not in VALID_PRESETS:
-        raise HTTPException(400, f"Invalid preset: {target}. Valid: A1-D6.")
-
-    pacer_config = storage.get_pacer_config()
-    if not pacer_config:
-        raise HTTPException(400, "Missing configuration in data/pacer.yaml")
-
-    # Auto-detekcja portu po nazwie urządzenia
-    port = find_midi_port(pacer_config.device_name)
-    if not port:
-        raise HTTPException(
-            400,
-            f"Nie znaleziono urządzenia '{pacer_config.device_name}'. "
-            "Sprawdź połączenie i uruchom 'amidi -l'."
-        )
-
-    timeout_seconds = pacer_config.amidi_timeout_seconds
-    sysex_interval = pacer_config.sysex_interval_ms
-
-    devices = storage.get_devices()
-    syx_data = export_song_to_syx(song, devices, target)
+    is_htmx = request.headers.get("HX-Request") == "true"
 
     try:
-        with NamedTemporaryFile(suffix=".syx", delete=True) as tmp:
-            tmp.write(syx_data)
-            tmp.flush()
-            # CRITICAL: --sysex-interval is required for reliable transfer!
-            run = subprocess.run(
-                ["amidi", "-p", port, f"--sysex-interval={sysex_interval}", "-s", tmp.name],
-                capture_output=True,
-                text=True,
-                timeout=timeout_seconds,
-                check=False,
+        song = storage.get_song(song_id)
+        if not song:
+            error_msg = "Song not found"
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
+                    status_code=404
+                )
+            raise HTTPException(404, error_msg)
+
+        target = preset or song.song.pacer_export.target_preset
+        target = target.upper()
+
+        if target not in VALID_PRESETS:
+            error_msg = f"Invalid preset: {target}. Valid: A1-D6."
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
+                    status_code=400
+                )
+            raise HTTPException(400, error_msg)
+
+        pacer_config = storage.get_pacer_config()
+        if not pacer_config:
+            error_msg = "Missing configuration in data/pacer.yaml"
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
+                    status_code=400
+                )
+            raise HTTPException(400, error_msg)
+
+        # Auto-detekcja portu po nazwie urządzenia
+        port = find_midi_port(pacer_config.device_name)
+        if not port:
+            error_msg = (
+                f"Nie znaleziono urządzenia '{pacer_config.device_name}'. "
+                "Sprawdź połączenie i uruchom 'amidi -l'."
             )
-    except FileNotFoundError:
-        raise HTTPException(500, "amidi not found - install alsa-utils package")
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
+                    status_code=400
+                )
+            raise HTTPException(400, error_msg)
 
-    if run.returncode != 0:
-        raise HTTPException(500, f"amidi failed: {run.stderr.strip()}")
+        timeout_seconds = pacer_config.amidi_timeout_seconds
+        sysex_interval = pacer_config.sysex_interval_ms
 
-    # Return HTML for HTMX requests, JSON for API clients
-    is_htmx = request.headers.get("HX-Request") == "true"
-    if is_htmx:
-        return HTMLResponse(
-            f'<span class="text-green-600">Wysłano do preset {target} na port {port}</span>'
-        )
+        devices = storage.get_devices()
+        syx_data = export_song_to_syx(song, devices, target)
 
-    return {"status": "ok", "preset": target, "port": port}
+        try:
+            with NamedTemporaryFile(suffix=".syx", delete=True) as tmp:
+                tmp.write(syx_data)
+                tmp.flush()
+                # CRITICAL: --sysex-interval is required for reliable transfer!
+                run = subprocess.run(
+                    ["amidi", "-p", port, f"--sysex-interval={sysex_interval}", "-s", tmp.name],
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds,
+                    check=False,
+                )
+        except FileNotFoundError:
+            error_msg = "amidi not found - install alsa-utils package"
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ {error_msg}</span>',
+                    status_code=500
+                )
+            raise HTTPException(500, error_msg)
+
+        if run.returncode != 0:
+            error_msg = run.stderr.strip()
+            logger.error(f"amidi failed for {song_id} to {target}: {error_msg}")
+            if is_htmx:
+                return HTMLResponse(
+                    f'<span class="text-red-600 font-semibold">❌ Błąd wysyłania: {error_msg}</span>',
+                    status_code=400
+                )
+            raise HTTPException(400, f"amidi failed: {error_msg}")
+
+        # Success
+        if is_htmx:
+            return HTMLResponse(
+                f'<span class="text-green-600">✓ Wysłano do preset {target} na port {port}</span>'
+            )
+        return {"status": "ok", "preset": target, "port": port}
+
+    except Exception as e:
+        logger.error(f"Error in send_to_pacer: {e}", exc_info=True)
+        error_msg = str(e)
+        if is_htmx:
+            return HTMLResponse(
+                f'<span class="text-red-600 font-semibold">❌ Błąd: {error_msg}</span>',
+                status_code=500
+            )
+        raise HTTPException(500, f"Internal error: {error_msg}")

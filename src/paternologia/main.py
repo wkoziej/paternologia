@@ -1,6 +1,7 @@
 # ABOUTME: FastAPI application entry point for Paternologia.
 # ABOUTME: Configures app with Jinja2 templates, static files, and API routers.
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -9,6 +10,12 @@ from fastapi.staticfiles import StaticFiles
 
 from paternologia.dependencies import get_storage
 from paternologia.routers import devices_router, pacer_router, songs_router
+
+# Configure logging to show ERROR and above
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STATIC_DIR = BASE_DIR / "static"
