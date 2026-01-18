@@ -174,6 +174,15 @@ class TestSongMetadata:
         assert meta.author == "Wojtek"
         assert meta.created == date(2024, 12, 14)
 
+    @pytest.mark.parametrize(
+        "bad_id",
+        ["W-ciszy", "w ciszy", "w/ciszy", "w_ciszy", "-w-ciszy", "w-ciszy-"],
+    )
+    def test_metadata_invalid_id(self, bad_id):
+        """Metadata rejects invalid IDs."""
+        with pytest.raises(ValidationError):
+            SongMetadata(id=bad_id, name="Test")
+
 
 class TestSong:
     """Tests for Song model."""
@@ -258,46 +267,32 @@ class TestPacerExportSettings:
 class TestPacerConfig:
     """Tests for PacerConfig model."""
 
-    def test_valid_port(self):
-        """Valid amidi port is accepted."""
-        config = PacerConfig(amidi_port="hw:8,0,0")
-        assert config.amidi_port == "hw:8,0,0"
+    def test_default_device_name(self):
+        """Default device_name is PACER."""
+        config = PacerConfig()
+        assert config.device_name == "PACER"
         assert config.amidi_timeout_seconds == 5
+        assert config.sysex_interval_ms == 20
 
-    def test_valid_port_different_numbers(self):
-        """Port with different numbers is valid."""
-        config = PacerConfig(amidi_port="hw:5,0,0")
-        assert config.amidi_port == "hw:5,0,0"
+    def test_custom_device_name(self):
+        """Custom device_name is accepted."""
+        config = PacerConfig(device_name="RC-600")
+        assert config.device_name == "RC-600"
 
     def test_custom_timeout(self):
         """Custom timeout is accepted."""
-        config = PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=10)
+        config = PacerConfig(amidi_timeout_seconds=10)
         assert config.amidi_timeout_seconds == 10
 
     def test_timeout_min_value(self):
         """Timeout must be at least 1."""
         with pytest.raises(ValidationError):
-            PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=0)
+            PacerConfig(amidi_timeout_seconds=0)
 
     def test_timeout_max_value(self):
         """Timeout cannot exceed 30."""
         with pytest.raises(ValidationError):
-            PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=31)
-
-    def test_invalid_port_format(self):
-        """Invalid port format is rejected."""
-        with pytest.raises(ValidationError):
-            PacerConfig(amidi_port="invalid")
-
-    def test_invalid_port_missing_hw(self):
-        """Port without hw: prefix is rejected."""
-        with pytest.raises(ValidationError):
-            PacerConfig(amidi_port="8,0,0")
-
-    def test_port_required(self):
-        """Port is required."""
-        with pytest.raises(ValidationError):
-            PacerConfig()
+            PacerConfig(amidi_timeout_seconds=31)
 
 
 class TestSongMetadataWithPacerExport:

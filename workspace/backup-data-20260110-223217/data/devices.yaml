@@ -18,10 +18,3 @@ devices:
     midi_channel: 2
     action_types:
       - preset
-  - id: valeton
-    name: ValetonGP200
-    description: Multieffect
-    midi_channel: 5
-    action_types:
-      - preset
-      - cc

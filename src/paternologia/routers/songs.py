@@ -5,6 +5,7 @@ from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 
 from paternologia.dependencies import get_storage, get_templates
 from paternologia.models import (
@@ -104,7 +105,10 @@ async def create_song(request: Request):
     if storage.song_exists(song_id):
         raise HTTPException(status_code=400, detail="Song with this ID already exists")
 
-    song = _build_song_from_form(form_data, song_id, song_name, song_author, song_notes, storage)
+    try:
+        song = _build_song_from_form(form_data, song_id, song_name, song_author, song_notes, storage)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=_format_validation_error(exc))
     storage.save_song(song)
 
     return RedirectResponse(url=f"/songs/{song_id}", status_code=303)
@@ -126,7 +130,10 @@ async def update_song(request: Request, song_id: str):
     if not song_name:
         raise HTTPException(status_code=400, detail="Name is required")
 
-    song = _build_song_from_form(form_data, song_id, song_name, song_author, song_notes, storage)
+    try:
+        song = _build_song_from_form(form_data, song_id, song_name, song_author, song_notes, storage)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=_format_validation_error(exc))
     storage.save_song(song)
 
     return RedirectResponse(url=f"/songs/{song_id}", status_code=303)
@@ -226,6 +233,18 @@ def _build_song_from_form(
         ),
         pacer=pacer_buttons,
     )
+
+
+def _format_validation_error(exc: ValidationError) -> str:
+    """Build a short validation error message for HTTP responses."""
+    if not exc.errors():
+        return "Niepoprawne dane formularza."
+    first = exc.errors()[0]
+    loc = ".".join(str(part) for part in first.get("loc", []))
+    msg = first.get("msg", "Niepoprawne dane formularza.")
+    if loc:
+        return f"{loc}: {msg}"
+    return msg
 
 
 @router.get("/partials/action-row", response_class=HTMLResponse)

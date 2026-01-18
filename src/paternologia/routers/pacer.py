@@ -16,6 +16,37 @@ from ..pacer import constants as c
 router = APIRouter(prefix="/pacer", tags=["pacer"])
 
 
+def find_midi_port(device_name: str) -> str | None:
+    """Znajdź port amidi po nazwie urządzenia.
+
+    Args:
+        device_name: Fragment nazwy urządzenia (np. "PACER")
+
+    Returns:
+        Port w formacie hw:X,Y,Z lub None jeśli nie znaleziono
+    """
+    try:
+        result = subprocess.run(
+            ["amidi", "-l"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+
+        for line in result.stdout.strip().split("\n"):
+            if device_name.upper() in line.upper():
+                # Format: "IO  hw:4,0,0  PACER MIDI1"
+                parts = line.split()
+                if len(parts) >= 2 and parts[1].startswith("hw:"):
+                    return parts[1]
+        return None
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+
 @router.get("/export/{song_id}.syx")
 def export_syx(
     song_id: str,
@@ -65,9 +96,17 @@ def send_to_pacer(
 
     pacer_config = storage.get_pacer_config()
     if not pacer_config:
-        raise HTTPException(400, "Missing amidi port configuration in data/pacer.yaml")
+        raise HTTPException(400, "Missing configuration in data/pacer.yaml")
 
-    port = pacer_config.amidi_port
+    # Auto-detekcja portu po nazwie urządzenia
+    port = find_midi_port(pacer_config.device_name)
+    if not port:
+        raise HTTPException(
+            400,
+            f"Nie znaleziono urządzenia '{pacer_config.device_name}'. "
+            "Sprawdź połączenie i uruchom 'amidi -l'."
+        )
+
     timeout_seconds = pacer_config.amidi_timeout_seconds
     sysex_interval = pacer_config.sysex_interval_ms
 

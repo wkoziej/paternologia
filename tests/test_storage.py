@@ -217,17 +217,17 @@ class TestPacerConfigStorage:
 
     def test_save_and_get_pacer_config(self, temp_storage):
         """PacerConfig can be saved and loaded."""
-        config = PacerConfig(amidi_port="hw:8,0,0", amidi_timeout_seconds=10)
+        config = PacerConfig(device_name="PACER", amidi_timeout_seconds=10)
         temp_storage.save_pacer_config(config)
 
         loaded = temp_storage.get_pacer_config()
         assert loaded is not None
-        assert loaded.amidi_port == "hw:8,0,0"
+        assert loaded.device_name == "PACER"
         assert loaded.amidi_timeout_seconds == 10
 
     def test_pacer_config_file_location(self, temp_storage):
         """PacerConfig is saved to data/pacer.yaml."""
-        config = PacerConfig(amidi_port="hw:5,0,0")
+        config = PacerConfig(device_name="RC-600")
         temp_storage.save_pacer_config(config)
 
         pacer_file = temp_storage.data_dir / "pacer.yaml"
@@ -235,7 +235,7 @@ class TestPacerConfigStorage:
 
     def test_get_pacer_config_with_default_timeout(self, temp_storage):
         """PacerConfig uses default timeout when not specified."""
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig()
         temp_storage.save_pacer_config(config)
 
         loaded = temp_storage.get_pacer_config()

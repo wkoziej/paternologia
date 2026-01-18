@@ -2,7 +2,7 @@ song:
   id: impro
   name: Impro
   author: ''
-  created: '2026-01-13'
+  created: '2025-12-30'
   notes: ''
   pacer_export:
     target_preset: A4
@@ -26,15 +26,15 @@ pacer:
   - device: boss
     type: cc
     value: 1
-    cc: 0
+    cc: 1
     label: None
     bank_lsb: 0
     bank_msb: 0
-- name: test valeton
+- name: w
   actions:
-  - device: valeton
-    type: preset
-    value: 0
+  - device: ms
+    type: pattern
+    value: D2
     cc: null
     label: None
     bank_lsb: 0
@@ -63,7 +63,7 @@ pacer:
     type: cc
     value: 1
     cc: 5
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0
 - name: tracks all FX D
@@ -72,6 +72,6 @@ pacer:
     type: cc
     value: 1
     cc: 6
-    label: None
+    label: null
     bank_lsb: 0
     bank_msb: 0

@@ -203,6 +203,14 @@ class TestSongCRUD:
         )
         assert response.status_code == 400
 
+    def test_create_song_invalid_id(self, client, sample_devices):
+        """Create fails for invalid song_id format."""
+        response = client.post(
+            "/songs",
+            data={"song_id": "Bad Id", "song_name": "Test"},
+        )
+        assert response.status_code == 400
+
     def test_update_song(self, client, sample_devices, test_storage):
         """Update an existing song via PUT."""
         from paternologia.models import Song, SongMetadata
@@ -333,28 +341,29 @@ class TestPacerSendEndpoint:
         song = Song(song=SongMetadata(id="test", name="Test Song"))
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
         mock_result = MagicMock()
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
-            response = client.post("/pacer/send/test")
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                response = client.post("/pacer/send/test")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "ok"
-            assert data["preset"] == "A1"
-            assert data["port"] == "hw:8,0,0"
+                assert response.status_code == 200
+                data = response.json()
+                assert data["status"] == "ok"
+                assert data["preset"] == "A1"
+                assert data["port"] == "hw:8,0,0"
 
-            mock_run.assert_called_once()
-            call_args = mock_run.call_args[0][0]
-            assert call_args[0] == "amidi"
-            assert "-p" in call_args
-            assert "hw:8,0,0" in call_args
-            assert "-s" in call_args
+                mock_run.assert_called_once()
+                call_args = mock_run.call_args[0][0]
+                assert call_args[0] == "amidi"
+                assert "-p" in call_args
+                assert "hw:8,0,0" in call_args
+                assert "-s" in call_args
 
     def test_send_to_pacer_custom_preset(self, client, sample_devices, test_storage):
         """Sends .syx with custom preset override."""
@@ -363,19 +372,20 @@ class TestPacerSendEndpoint:
         song = Song(song=SongMetadata(id="test", name="Test Song"))
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
         mock_result = MagicMock()
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("subprocess.run", return_value=mock_result):
-            response = client.post("/pacer/send/test", data={"preset": "B3"})
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            with patch("subprocess.run", return_value=mock_result):
+                response = client.post("/pacer/send/test", data={"preset": "B3"})
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["preset"] == "B3"
+                assert response.status_code == 200
+                data = response.json()
+                assert data["preset"] == "B3"
 
     def test_send_to_pacer_uses_song_default_preset(self, client, sample_devices, test_storage):
         """Uses song's default preset when not specified in query."""
@@ -390,23 +400,24 @@ class TestPacerSendEndpoint:
         )
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
         mock_result = MagicMock()
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("subprocess.run", return_value=mock_result):
-            response = client.post("/pacer/send/test")
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            with patch("subprocess.run", return_value=mock_result):
+                response = client.post("/pacer/send/test")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["preset"] == "C4"
+                assert response.status_code == 200
+                data = response.json()
+                assert data["preset"] == "C4"
 
     def test_send_to_pacer_song_not_found(self, client, sample_devices, test_storage):
         """Returns 404 when song doesn't exist."""
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
         response = client.post("/pacer/send/nonexistent")
@@ -430,12 +441,29 @@ class TestPacerSendEndpoint:
         song = Song(song=SongMetadata(id="test", name="Test Song"))
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
-        response = client.post("/pacer/send/test", data={"preset": "E1"})
-        assert response.status_code == 400
-        assert "Invalid preset" in response.json()["detail"]
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            response = client.post("/pacer/send/test", data={"preset": "E1"})
+            assert response.status_code == 400
+            assert "Invalid preset" in response.json()["detail"]
+
+    def test_send_to_pacer_device_not_found(self, client, sample_devices, test_storage):
+        """Returns 400 when device is not connected."""
+        from paternologia.models import Song, SongMetadata
+
+        song = Song(song=SongMetadata(id="test", name="Test Song"))
+        test_storage.save_song(song)
+
+        config = PacerConfig(device_name="PACER")
+        test_storage.save_pacer_config(config)
+
+        with patch("paternologia.routers.pacer.find_midi_port", return_value=None):
+            response = client.post("/pacer/send/test")
+
+            assert response.status_code == 400
+            assert "Nie znaleziono" in response.json()["detail"]
 
     def test_send_to_pacer_amidi_not_found(self, client, sample_devices, test_storage):
         """Returns 500 when amidi is not installed."""
@@ -444,14 +472,15 @@ class TestPacerSendEndpoint:
         song = Song(song=SongMetadata(id="test", name="Test Song"))
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            response = client.post("/pacer/send/test")
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            with patch("subprocess.run", side_effect=FileNotFoundError):
+                response = client.post("/pacer/send/test")
 
-            assert response.status_code == 500
-            assert "amidi not found" in response.json()["detail"]
+                assert response.status_code == 500
+                assert "amidi not found" in response.json()["detail"]
 
     def test_send_to_pacer_amidi_failure(self, client, sample_devices, test_storage):
         """Returns 500 when amidi command fails."""
@@ -460,18 +489,19 @@ class TestPacerSendEndpoint:
         song = Song(song=SongMetadata(id="test", name="Test Song"))
         test_storage.save_song(song)
 
-        config = PacerConfig(amidi_port="hw:8,0,0")
+        config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
         mock_result = MagicMock()
         mock_result.returncode = 1
         mock_result.stderr = "Device not found"
 
-        with patch("subprocess.run", return_value=mock_result):
-            response = client.post("/pacer/send/test")
+        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+            with patch("subprocess.run", return_value=mock_result):
+                response = client.post("/pacer/send/test")
 
-            assert response.status_code == 500
-            assert "amidi failed" in response.json()["detail"]
+                assert response.status_code == 500
+                assert "amidi failed" in response.json()["detail"]
 
 
 class TestHTMXPartials:

@@ -105,7 +105,10 @@ class PacerExportSettings(BaseModel):
 class PacerConfig(BaseModel):
     """Globalna konfiguracja portu amidi."""
 
-    amidi_port: str = Field(..., description="Domyślny port amidi")
+    device_name: str = Field(
+        default="PACER",
+        description="Nazwa urządzenia MIDI do auto-detekcji (szukana w amidi -l)",
+    )
     amidi_timeout_seconds: int = Field(
         default=5,
         ge=1,
@@ -118,14 +121,6 @@ class PacerConfig(BaseModel):
         le=100,
         description="Interwał między wiadomościami SysEx w ms (CRITICAL: 20 wymagane!)",
     )
-
-    @field_validator("amidi_port")
-    @classmethod
-    def validate_amidi_port(cls, v: str) -> str:
-        """Waliduje format portu amidi (hw:X,Y,Z)."""
-        if not re.match(r"^hw:\d+,\d+,\d+$", v):
-            raise ValueError(f"Invalid amidi port format: {v}. Expected: hw:X,Y,Z")
-        return v
 
 
 class SongMetadata(BaseModel):
@@ -140,6 +135,15 @@ class SongMetadata(BaseModel):
         default_factory=PacerExportSettings,
         description="Ustawienia eksportu Pacera",
     )
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        """Wymusza kebab-case i bezpieczne ID dla plików."""
+        v = v.strip()
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", v):
+            raise ValueError("Song ID musi być kebab-case: małe litery, cyfry, myślniki.")
+        return v
 
 
 class Song(BaseModel):
