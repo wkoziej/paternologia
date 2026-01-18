@@ -25,3 +25,9 @@ devices:
     action_types:
       - preset
       - cc
+  - id: start_stop
+    name: OBS Controll
+    description: Multieffect
+    midi_channel: 15
+    action_types:
+      - cc

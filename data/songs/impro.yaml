@@ -2,7 +2,7 @@ song:
   id: impro
   name: Impro
   author: ''
-  created: '2026-01-13'
+  created: '2026-01-18'
   notes: ''
   pacer_export:
     target_preset: A4
@@ -68,10 +68,10 @@ pacer:
     bank_msb: 0
 - name: tracks all FX D
   actions:
-  - device: boss
+  - device: start_stop
     type: cc
-    value: 1
-    cc: 6
-    label: None
+    value: 127
+    cc: 64
+    label: null
     bank_lsb: 0
     bank_msb: 0

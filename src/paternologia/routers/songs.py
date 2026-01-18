@@ -181,12 +181,12 @@ def _build_song_from_form(
 
         if button_name:
             actions = []
-            action_idx = 0
 
-            while True:
+            # Collect actions regardless of index gaps (handles deletion of early actions)
+            for action_idx in range(6):
                 action_device = form_data.get(f"button_{button_idx}_action_{action_idx}_device", "").strip()
                 if not action_device:
-                    break
+                    continue  # Skip missing actions instead of breaking
 
                 action_type_str = form_data.get(f"button_{button_idx}_action_{action_idx}_type", "").strip()
                 action_value = form_data.get(f"button_{button_idx}_action_{action_idx}_value", "").strip()
@@ -211,10 +211,6 @@ def _build_song_from_form(
                         label=action_label or None,
                     )
                     actions.append(action)
-
-                action_idx += 1
-                if action_idx > 6:
-                    break
 
             pacer_buttons.append(PacerButton(name=button_name, actions=actions))
 

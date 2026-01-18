@@ -206,6 +206,63 @@ class TestFullUserWorkflow:
         assert "Chorus" in response.text
         assert "Bridge" in response.text
 
+    def test_delete_first_action_keeps_second_action(self, client, setup_devices, test_storage):
+        """User can delete first action while keeping second action in same button.
+
+        This tests the bug where deleting action[0] but keeping action[1] causes
+        all actions to be lost because the form parser breaks on missing action_0.
+        """
+        # Create initial song with button containing 2 actions
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "action-delete-test",
+                "song_name": "Action Delete Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Test Button",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "preset",
+                "button_0_action_0_value": "1",
+                "button_0_action_1_device": "ms",
+                "button_0_action_1_type": "pattern",
+                "button_0_action_1_value": "A0",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("action-delete-test")
+        assert len(song.pacer[0].actions) == 2
+        assert song.pacer[0].actions[0].device == "boss"
+        assert song.pacer[0].actions[1].device == "ms"
+
+        # Now simulate deleting first action in UI by submitting form without action_0
+        # but keeping action_1 (this is what happens when user clicks delete button in UI)
+        response = client.put(
+            "/songs/action-delete-test",
+            data={
+                "song_name": "Action Delete Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Test Button",
+                # action_0 is MISSING (deleted in UI)
+                "button_0_action_1_device": "ms",
+                "button_0_action_1_type": "pattern",
+                "button_0_action_1_value": "A0",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        # Check that second action is still there (not all actions deleted)
+        updated_song = test_storage.get_song("action-delete-test")
+        assert len(updated_song.pacer[0].actions) == 1, \
+            "Expected 1 action to remain, but got: " \
+            f"{[(a.device, a.type) for a in updated_song.pacer[0].actions]}"
+        assert updated_song.pacer[0].actions[0].device == "ms"
+        assert updated_song.pacer[0].actions[0].type.value == "pattern"
+
 
 class TestNavigationFlow:
     """E2E tests for navigation between pages."""

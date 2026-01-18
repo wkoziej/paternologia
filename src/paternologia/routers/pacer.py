@@ -165,7 +165,7 @@ def send_to_pacer(
                 return HTMLResponse(
                     f'<span class="text-red-600 font-semibold">❌ Błąd wysyłania: {error_msg}</span>'
                 )
-            raise HTTPException(400, f"amidi failed: {error_msg}")
+            raise HTTPException(500, f"amidi failed: {error_msg}")
 
         # Success
         if is_htmx:
@@ -174,6 +174,8 @@ def send_to_pacer(
             )
         return {"status": "ok", "preset": target, "port": port}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in send_to_pacer: {e}", exc_info=True)
         error_msg = str(e)
