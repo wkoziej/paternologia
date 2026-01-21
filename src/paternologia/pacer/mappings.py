@@ -73,16 +73,30 @@ def action_to_midi(
     channel = get_device_channel(action.device, device_channel_map)
 
     if action.type == ActionType.PRESET:
-        # Program Step: data1=unused, data2=start, data3=end
-        # Używamy start=end dla natychmiastowego przełączenia presetu
         program = action.value if isinstance(action.value, int) else 0
-        return (
-            c.MSG_SW_PRG_STEP,
-            channel,
-            0,        # data1 = unused
-            program,  # data2 = start (program number)
-            program   # data3 = end (ten sam = immediate)
-        )
+
+        if program < 128:
+            # Program Step: data1=unused, data2=start, data3=end
+            # Używamy start=end dla natychmiastowego przełączenia presetu
+            return (
+                c.MSG_SW_PRG_STEP,
+                channel,
+                0,        # data1 = unused
+                program,  # data2 = start (program number)
+                program   # data3 = end (ten sam = immediate)
+            )
+        else:
+            # Program + Bank: dla presetów >= 128
+            # MSG_SW_PRG_BANK: data1=program, data2=bank LSB, data3=bank MSB
+            bank_msb = program // 128
+            prog = program % 128
+            return (
+                c.MSG_SW_PRG_BANK,
+                channel,
+                prog,      # data1 = program (0-127)
+                0,         # data2 = bank LSB
+                bank_msb   # data3 = bank MSB
+            )
 
     elif action.type == ActionType.PATTERN:
         # Pattern na Model:Samples = Program Step
