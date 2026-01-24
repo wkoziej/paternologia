@@ -1,0 +1,66 @@
+song:
+  id: slimak
+  name: Ślimak
+  author: ''
+  created: '2026-01-23'
+  notes: ''
+  pacer_export:
+    target_preset: A6
+pacer:
+- name: presety i beat
+  actions:
+  - device: boss
+    type: preset
+    value: 17
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+  - device: ms
+    type: pattern
+    value: e8
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+- name: nagrywaj
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+  - device: ms
+    type: pattern
+    value: e9
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+- name: skoczniej
+  actions:
+  - device: ms
+    type: pattern
+    value: e10
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+- name: zwalniaj
+  actions:
+  - device: ms
+    type: pattern
+    value: e9
+    cc: null
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
