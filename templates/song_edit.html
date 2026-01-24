@@ -113,3 +113,58 @@
     </div>
 </form>
 {% endblock %}
+
+{% block scripts %}
+<script>
+function moveButtonUp(btn) {
+    const card = btn.closest('.pacer-button-card');
+    const prev = card.previousElementSibling;
+    if (prev && prev.classList.contains('pacer-button-card')) {
+        card.parentNode.insertBefore(card, prev);
+        renumberButtons();
+    }
+}
+
+function moveButtonDown(btn) {
+    const card = btn.closest('.pacer-button-card');
+    const next = card.nextElementSibling;
+    if (next && next.classList.contains('pacer-button-card')) {
+        card.parentNode.insertBefore(next, card);
+        renumberButtons();
+    }
+}
+
+function renumberButtons() {
+    const container = document.getElementById('pacer-buttons');
+    const cards = container.querySelectorAll('.pacer-button-card');
+
+    cards.forEach((card, newIdx) => {
+        // Update data attribute
+        card.dataset.buttonIdx = newIdx;
+
+        // Update button number display
+        card.querySelector('.button-number').textContent = '#' + (newIdx + 1);
+
+        // Update actions container id
+        const actionsContainer = card.querySelector('.actions-container');
+        if (actionsContainer) {
+            actionsContainer.id = 'actions-' + newIdx;
+        }
+
+        // Update "Add action" button hx-target and hx-vals
+        const addActionBtn = card.querySelector('button[hx-get*="/partials/action-row"]');
+        if (addActionBtn) {
+            addActionBtn.setAttribute('hx-target', '#actions-' + newIdx);
+            addActionBtn.setAttribute('hx-vals',
+                'js:{button_idx: ' + newIdx + ', action_idx: event.target.closest(\'.pacer-button-card\').querySelectorAll(\'.action-row\').length}');
+            htmx.process(addActionBtn);
+        }
+
+        // Update all input/select names within this card
+        card.querySelectorAll('input[name], select[name]').forEach(el => {
+            el.name = el.name.replace(/button_\d+/, 'button_' + newIdx);
+        });
+    });
+}
+</script>
+{% endblock %}

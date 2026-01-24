@@ -350,3 +350,77 @@ class TestAPIEndpoints:
 
         ms = next(d for d in data if d["id"] == "ms")
         assert "pattern" in ms["action_types"]
+
+
+class TestButtonReordering:
+    """E2E tests for PACER button reordering functionality."""
+
+    def test_reorder_buttons_preserves_data(self, client, setup_devices, test_storage):
+        """When buttons are reordered in form, backend saves them in correct order.
+
+        This tests the scenario where user moves button 3 to position 1.
+        The form would then have:
+        - button_0 = was button 3 (Bridge)
+        - button_1 = was button 1 (Verse)
+        - button_2 = was button 2 (Chorus)
+        """
+        # Create initial song with 3 buttons in order: Verse, Chorus, Bridge
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "reorder-test",
+                "song_name": "Reorder Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Verse",
+                "button_0_action_0_device": "boss",
+                "button_0_action_0_type": "preset",
+                "button_0_action_0_value": "1",
+                "button_1_name": "Chorus",
+                "button_1_action_0_device": "boss",
+                "button_1_action_0_type": "preset",
+                "button_1_action_0_value": "2",
+                "button_2_name": "Bridge",
+                "button_2_action_0_device": "ms",
+                "button_2_action_0_type": "pattern",
+                "button_2_action_0_value": "A0",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("reorder-test")
+        assert [b.name for b in song.pacer] == ["Verse", "Chorus", "Bridge"]
+
+        # Now submit form with reordered buttons: Bridge, Verse, Chorus
+        # This simulates what happens after JS reordering and renumbering
+        response = client.put(
+            "/songs/reorder-test",
+            data={
+                "song_name": "Reorder Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Bridge",
+                "button_0_action_0_device": "ms",
+                "button_0_action_0_type": "pattern",
+                "button_0_action_0_value": "A0",
+                "button_1_name": "Verse",
+                "button_1_action_0_device": "boss",
+                "button_1_action_0_type": "preset",
+                "button_1_action_0_value": "1",
+                "button_2_name": "Chorus",
+                "button_2_action_0_device": "boss",
+                "button_2_action_0_type": "preset",
+                "button_2_action_0_value": "2",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        # Verify buttons are now in new order
+        updated_song = test_storage.get_song("reorder-test")
+        assert [b.name for b in updated_song.pacer] == ["Bridge", "Verse", "Chorus"]
+        # Verify actions moved with buttons
+        assert updated_song.pacer[0].actions[0].device == "ms"
+        assert updated_song.pacer[1].actions[0].device == "boss"
+        assert updated_song.pacer[1].actions[0].value == 1

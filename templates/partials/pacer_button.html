@@ -1,10 +1,16 @@
 {# ABOUTME: HTMX partial for PACER button card in song edit form. #}
 {# ABOUTME: button_idx must be set before including this partial. #}
-<div class="pacer-button-card border border-gray-200 rounded-lg p-4">
+<div class="pacer-button-card border border-gray-200 rounded-lg p-4" data-button-idx="{{ button_idx }}">
     <div class="flex justify-between items-center mb-2">
-        <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-bold">#{{ button_idx + 1 }}</span>
-        <button type="button" onclick="this.closest('.pacer-button-card').remove()"
-                class="text-red-500 hover:text-red-700">🗑️</button>
+        <span class="button-number bg-indigo-600 text-white px-2 py-1 rounded text-sm font-bold">#{{ button_idx + 1 }}</span>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="moveButtonUp(this)"
+                    class="text-gray-500 hover:text-indigo-600 text-lg" title="Przesuń w górę">↑</button>
+            <button type="button" onclick="moveButtonDown(this)"
+                    class="text-gray-500 hover:text-indigo-600 text-lg" title="Przesuń w dół">↓</button>
+            <button type="button" onclick="this.closest('.pacer-button-card').remove(); renumberButtons();"
+                    class="text-red-500 hover:text-red-700">🗑️</button>
+        </div>
     </div>
     <div class="mb-4">
         <input type="text" name="button_{{ button_idx }}_name"
