@@ -191,6 +191,8 @@ def _build_song_from_form(
                 action_type_str = form_data.get(f"button_{button_idx}_action_{action_idx}_type", "").strip()
                 action_value = form_data.get(f"button_{button_idx}_action_{action_idx}_value", "").strip()
                 action_cc = form_data.get(f"button_{button_idx}_action_{action_idx}_cc", "").strip()
+                action_note = form_data.get(f"button_{button_idx}_action_{action_idx}_note", "").strip()
+                action_velocity = form_data.get(f"button_{button_idx}_action_{action_idx}_velocity", "").strip()
                 action_label = form_data.get(f"button_{button_idx}_action_{action_idx}_label", "").strip()
 
                 if action_type_str:
@@ -208,6 +210,8 @@ def _build_song_from_form(
                         type=action_type,
                         value=value,
                         cc=int(action_cc) if action_cc else None,
+                        note=action_note or None,
+                        velocity=int(action_velocity) if action_velocity else None,
                         label=action_label or None,
                     )
                     actions.append(action)

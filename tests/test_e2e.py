@@ -48,7 +48,7 @@ def setup_devices(test_storage):
             id="freak",
             name="Arturia MicroFreak",
             description="Synthesizer",
-            action_types=[ActionType.PRESET],
+            action_types=[ActionType.PRESET, ActionType.NOTE],
         ),
     ]
     test_storage.save_devices(devices)
@@ -262,6 +262,106 @@ class TestFullUserWorkflow:
             f"{[(a.device, a.type) for a in updated_song.pacer[0].actions]}"
         assert updated_song.pacer[0].actions[0].device == "ms"
         assert updated_song.pacer[0].actions[0].type.value == "pattern"
+
+
+class TestNoteActionType:
+    """E2E tests for NOTE action type."""
+
+    def test_create_song_with_note_action(self, client, setup_devices, test_storage):
+        """User can create a song with NOTE action type."""
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "note-test",
+                "song_name": "Note Test Song",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Trigger Note",
+                "button_0_action_0_device": "freak",
+                "button_0_action_0_type": "note",
+                "button_0_action_0_note": "C4",
+                "button_0_action_0_velocity": "100",
+                "button_0_action_0_label": "Middle C",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        song = test_storage.get_song("note-test")
+        assert song is not None
+        assert len(song.pacer) == 1
+        assert song.pacer[0].actions[0].type.value == "note"
+        assert song.pacer[0].actions[0].note == "C4"
+        assert song.pacer[0].actions[0].velocity == 100
+
+    def test_view_song_with_note_action(self, client, setup_devices, test_storage):
+        """Song view page displays NOTE actions correctly."""
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "note-view-test",
+                "song_name": "Note View Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Play F#3",
+                "button_0_action_0_device": "freak",
+                "button_0_action_0_type": "note",
+                "button_0_action_0_note": "F#3",
+                "button_0_action_0_velocity": "80",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        response = client.get("/songs/note-view-test")
+        assert response.status_code == 200
+        assert "note F#3" in response.text
+        assert "vel=80" in response.text
+        assert "MicroFreak" in response.text
+
+    def test_edit_song_with_note_action_preserves_data(self, client, setup_devices, test_storage):
+        """Editing a song with NOTE action preserves note data."""
+        response = client.post(
+            "/songs",
+            data={
+                "song_id": "note-edit-test",
+                "song_name": "Note Edit Test",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Original Note",
+                "button_0_action_0_device": "freak",
+                "button_0_action_0_type": "note",
+                "button_0_action_0_note": "A4",
+                "button_0_action_0_velocity": "127",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        response = client.get("/songs/note-edit-test/edit")
+        assert response.status_code == 200
+        assert 'value="A4"' in response.text or "A4" in response.text
+        assert "127" in response.text
+
+        response = client.put(
+            "/songs/note-edit-test",
+            data={
+                "song_name": "Note Edit Test Updated",
+                "song_author": "",
+                "song_notes": "",
+                "button_0_name": "Updated Note",
+                "button_0_action_0_device": "freak",
+                "button_0_action_0_type": "note",
+                "button_0_action_0_note": "Bb5",
+                "button_0_action_0_velocity": "64",
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+
+        updated_song = test_storage.get_song("note-edit-test")
+        assert updated_song.pacer[0].actions[0].note == "Bb5"
+        assert updated_song.pacer[0].actions[0].velocity == 64
 
 
 class TestNavigationFlow:

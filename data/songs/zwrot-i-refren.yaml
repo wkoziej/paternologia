@@ -2,7 +2,7 @@ song:
   id: zwrot-i-refren
   name: Zwrotka i refren
   author: ''
-  created: '2026-01-24'
+  created: '2026-01-25'
   notes: ''
   pacer_export:
     target_preset: B2
@@ -10,10 +10,10 @@ pacer:
 - name: zwrotka
   actions:
   - device: boss
-    type: cc
-    value: 127
-    cc: 20
-    label: None
+    type: preset
+    value: 7
+    cc: null
+    label: null
     bank_lsb: 0
     bank_msb: 0
   - device: ms
@@ -21,6 +21,13 @@ pacer:
     value: D9
     cc: null
     label: None
+    bank_lsb: 0
+    bank_msb: 0
+  - device: boss
+    type: cc
+    value: 127
+    cc: 20
+    label: null
     bank_lsb: 0
     bank_msb: 0
 - name: refren

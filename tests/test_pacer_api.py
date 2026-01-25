@@ -211,9 +211,9 @@ class TestExportEdgeCases:
         response = client.get("/pacer/export/full.syx")
 
         assert response.status_code == 200
-        # 36 steps should use MSG_SW_PRG_STEP (note: 'F' in "Full" is also 0x46)
-        # So we check >= 36 instead of exact count
-        assert response.content.count(bytes([c.MSG_SW_PRG_STEP])) >= 36
+        # 36 PRESET steps should use MSG_SW_PRG_BANK (0x45)
+        # Note: 'E' in some strings is also 0x45, so check >= 36
+        assert response.content.count(bytes([c.MSG_SW_PRG_BANK])) >= 36
 
     def test_export_special_characters_in_name(self, client, sample_devices, test_storage):
         """Export song with special characters in name."""

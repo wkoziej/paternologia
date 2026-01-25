@@ -100,6 +100,8 @@
                         pattern {{ action.value }}
                         {% elif action.type.value == 'cc' %}
                         CC{{ action.cc }}
+                        {% elif action.type.value == 'note' %}
+                        note {{ action.note }} vel={{ action.velocity or 100 }}
                         {% endif %}
                     </div>
                 </div>

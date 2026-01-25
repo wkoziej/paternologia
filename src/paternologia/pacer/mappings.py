@@ -1,8 +1,69 @@
 # ABOUTME: Mapping Paternologia models to MIDI parameters for Pacer.
 # ABOUTME: Converts Action types to SysEx message parameters.
 
+import re
+
 from ..models import Action, ActionType, Device
 from . import constants as c
+
+# Mapping note names to semitone offsets (C=0, C#=1, D=2, etc.)
+NOTE_NAMES = {
+    'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+}
+
+# Pattern: note name (C-G, A-B), optional accidental (#/b), octave (-1 to 9)
+NOTE_PATTERN = re.compile(r'^([A-Ga-g])([#b]?)(-?[0-9])$')
+
+
+def note_to_midi(note: str | int) -> int:
+    """Konwertuj notację muzyczną na numer nuty MIDI.
+
+    Args:
+        note: Notacja muzyczna (np. "C4", "F#3", "Bb5") lub numer MIDI (0-127)
+
+    Returns:
+        Numer nuty MIDI (0-127)
+
+    Raises:
+        ValueError: Gdy notacja jest nieprawidłowa lub nuta poza zakresem
+
+    Konwersja: C4 = 60 (middle C), A4 = 69 (concert pitch)
+    Formuła: midi_number = (octave + 1) * 12 + semitone
+    """
+    if isinstance(note, int):
+        if note < 0 or note > 127:
+            raise ValueError(f"Numer nuty MIDI musi być 0-127, otrzymano: {note}")
+        return note
+
+    # Numeryczny string (np. "60")
+    try:
+        midi_num = int(note)
+        if midi_num < 0 or midi_num > 127:
+            raise ValueError(f"Numer nuty MIDI musi być 0-127, otrzymano: {midi_num}")
+        return midi_num
+    except ValueError:
+        pass
+
+    # Notacja muzyczna (np. "C4", "F#3")
+    match = NOTE_PATTERN.match(note)
+    if not match:
+        raise ValueError(f"Nieprawidłowa notacja nuty: {note}")
+
+    note_name, accidental, octave_str = match.groups()
+    semitone = NOTE_NAMES[note_name.upper()]
+
+    if accidental == '#':
+        semitone += 1
+    elif accidental == 'b':
+        semitone -= 1
+
+    octave = int(octave_str)
+    midi_number = (octave + 1) * 12 + semitone
+
+    if midi_number < 0 or midi_number > 127:
+        raise ValueError(f"Nuta {note} poza zakresem MIDI (0-127): {midi_number}")
+
+    return midi_number
 
 
 def build_device_channel_map(devices: list[Device]) -> dict[str, int]:
@@ -75,28 +136,18 @@ def action_to_midi(
     if action.type == ActionType.PRESET:
         program = action.value if isinstance(action.value, int) else 0
 
-        if program < 128:
-            # Program Step: data1=unused, data2=start, data3=end
-            # Używamy start=end dla natychmiastowego przełączenia presetu
-            return (
-                c.MSG_SW_PRG_STEP,
-                channel,
-                0,        # data1 = unused
-                program,  # data2 = start (program number)
-                program   # data3 = end (ten sam = immediate)
-            )
-        else:
-            # Program + Bank: dla presetów >= 128
-            # MSG_SW_PRG_BANK: data1=program, data2=bank LSB, data3=bank MSB
-            bank_msb = program // 128
-            prog = program % 128
-            return (
-                c.MSG_SW_PRG_BANK,
-                channel,
-                prog,      # data1 = program (0-127)
-                0,         # data2 = bank LSB
-                bank_msb   # data3 = bank MSB
-            )
+        # MSG_SW_PRG_BANK wysyła Program Change + Bank Select
+        # MSG_SW_PRG_STEP jest do stepowania przez zakresy (nie do pojedynczych PC!)
+        # Format: data1=program (0-127), data2=bank LSB, data3=bank MSB
+        bank_msb = program // 128
+        prog = program % 128
+        return (
+            c.MSG_SW_PRG_BANK,
+            channel,
+            prog,      # data1 = program (0-127)
+            0,         # data2 = bank LSB
+            bank_msb   # data3 = bank MSB
+        )
 
     elif action.type == ActionType.PATTERN:
         # Pattern na Model:Samples = Program Step
@@ -110,6 +161,12 @@ def action_to_midi(
         # Dla RC-600 w trybie MOMENT: down=127 (ON), up=0 (OFF)
         cc_value = action.value if isinstance(action.value, int) else 127
         return (c.MSG_SW_MIDI_CC, channel, action.cc or 0, cc_value, 0)
+
+    elif action.type == ActionType.NOTE:
+        # Note: data1=note, data2=velocity, data3=unused
+        midi_note = note_to_midi(action.note) if action.note else 60
+        velocity = action.velocity if action.velocity else 100
+        return (c.MSG_SW_NOTE, channel, midi_note, velocity, 0)
 
     else:
         raise ValueError(f"Nieobsługiwany typ akcji: {action.type}")

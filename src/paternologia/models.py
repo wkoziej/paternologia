@@ -15,6 +15,7 @@ class ActionType(str, Enum):
     PRESET = "preset"
     PATTERN = "pattern"
     CC = "cc"
+    NOTE = "note"
 
 
 class Device(BaseModel):
@@ -60,15 +61,28 @@ class Action(BaseModel):
         le=127,
         description="Bank MSB (CC 0) for PRESET type"
     )
+    note: str | int | None = Field(
+        default=None,
+        description="MIDI note (musical notation like 'C4' or number 0-127)"
+    )
+    velocity: int | None = Field(
+        default=None,
+        ge=1,
+        le=127,
+        description="Note velocity (1-127)"
+    )
 
     @model_validator(mode='after')
-    def validate_cc_value(self) -> 'Action':
-        """Wymaga value dla ActionType.CC."""
-        if self.type == ActionType.CC and self.value is None:
-            raise ValueError("ActionType.CC wymaga pola 'value' (0-127)")
+    def validate_action_fields(self) -> 'Action':
+        """Walidacja pól w zależności od typu akcji."""
         if self.type == ActionType.CC:
+            if self.value is None:
+                raise ValueError("ActionType.CC wymaga pola 'value' (0-127)")
             if not isinstance(self.value, int) or self.value < 0 or self.value > 127:
                 raise ValueError(f"ActionType.CC value musi być 0-127, otrzymano: {self.value}")
+        if self.type == ActionType.NOTE:
+            if self.note is None:
+                raise ValueError("ActionType.NOTE wymaga pola 'note'")
         return self
 
 

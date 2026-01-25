@@ -8,6 +8,7 @@ from paternologia.pacer.mappings import (
     action_to_midi,
     build_device_channel_map,
     get_device_channel,
+    note_to_midi,
     pattern_to_program,
 )
 from paternologia.pacer import constants as c
@@ -88,16 +89,16 @@ class TestActionToMidiPreset:
     """Tests for PRESET action conversion."""
 
     def test_preset_basic(self):
-        """PRESET action converts to MSG_SW_PRG_STEP."""
+        """PRESET action converts to MSG_SW_PRG_BANK with bank=0."""
         action = Action(device="boss", type=ActionType.PRESET, value=5)
         channel_map = {"boss": 0}
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
-        assert msg_type == c.MSG_SW_PRG_STEP
+        assert msg_type == c.MSG_SW_PRG_BANK
         assert channel == 0
-        assert data1 == 0  # unused
-        assert data2 == 5  # start (program)
-        assert data3 == 5  # end (same = immediate)
+        assert data1 == 5  # program (0-127)
+        assert data2 == 0  # bank LSB
+        assert data3 == 0  # bank MSB
 
     def test_preset_different_channel(self):
         """PRESET action on different channel."""
@@ -106,9 +107,9 @@ class TestActionToMidiPreset:
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
         assert channel == 3
-        assert data1 == 0  # unused
-        assert data2 == 10  # start (program)
-        assert data3 == 10  # end (same = immediate)
+        assert data1 == 10  # program (0-127)
+        assert data2 == 0   # bank LSB
+        assert data3 == 0   # bank MSB
 
 
 class TestActionToMidiPattern:
@@ -174,3 +175,107 @@ class TestActionToMidiUnknownDevice:
         msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
 
         assert channel == 0
+
+
+class TestNoteToMidi:
+    """Tests for musical notation to MIDI note number conversion."""
+
+    def test_middle_c(self):
+        """C4 (middle C) converts to 60."""
+        assert note_to_midi("C4") == 60
+
+    def test_a4_concert_pitch(self):
+        """A4 (concert pitch) converts to 69."""
+        assert note_to_midi("A4") == 69
+
+    def test_lowest_note(self):
+        """C-1 converts to 0."""
+        assert note_to_midi("C-1") == 0
+
+    def test_highest_note(self):
+        """G9 converts to 127."""
+        assert note_to_midi("G9") == 127
+
+    def test_sharp_notes(self):
+        """Sharp notes convert correctly."""
+        assert note_to_midi("C#4") == 61
+        assert note_to_midi("F#3") == 54
+        assert note_to_midi("G#5") == 80
+
+    def test_flat_notes(self):
+        """Flat notes convert correctly."""
+        assert note_to_midi("Db4") == 61  # same as C#4
+        assert note_to_midi("Bb3") == 58
+        assert note_to_midi("Eb5") == 75
+
+    def test_lowercase(self):
+        """Lowercase note names work."""
+        assert note_to_midi("c4") == 60
+        assert note_to_midi("f#3") == 54
+        assert note_to_midi("bb3") == 58
+
+    def test_integer_passthrough(self):
+        """Integer values pass through unchanged."""
+        assert note_to_midi(60) == 60
+        assert note_to_midi(127) == 127
+
+    def test_numeric_string(self):
+        """Numeric strings convert to integers."""
+        assert note_to_midi("60") == 60
+        assert note_to_midi("127") == 127
+
+    def test_invalid_note_raises(self):
+        """Invalid note notation raises ValueError."""
+        with pytest.raises(ValueError):
+            note_to_midi("X4")
+        with pytest.raises(ValueError):
+            note_to_midi("C")
+        with pytest.raises(ValueError):
+            note_to_midi("invalid")
+
+    def test_out_of_range_raises(self):
+        """Out of range notes raise ValueError."""
+        with pytest.raises(ValueError):
+            note_to_midi("C10")  # > 127
+        with pytest.raises(ValueError):
+            note_to_midi(-1)
+        with pytest.raises(ValueError):
+            note_to_midi(128)
+
+
+class TestActionToMidiNote:
+    """Tests for NOTE action conversion."""
+
+    def test_note_basic(self):
+        """NOTE action converts to MSG_SW_NOTE."""
+        action = Action(
+            device="freak", type=ActionType.NOTE, note="C4", velocity=100
+        )
+        channel_map = {"freak": 2}
+        msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
+
+        assert msg_type == c.MSG_SW_NOTE
+        assert channel == 2
+        assert data1 == 60   # C4
+        assert data2 == 100  # velocity
+        assert data3 == 0    # unused
+
+    def test_note_sharp(self):
+        """NOTE action with sharp note."""
+        action = Action(
+            device="freak", type=ActionType.NOTE, note="F#3", velocity=80
+        )
+        channel_map = {"freak": 2}
+        msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
+
+        assert data1 == 54  # F#3
+        assert data2 == 80
+
+    def test_note_default_velocity(self):
+        """NOTE action uses default velocity when not specified."""
+        action = Action(device="freak", type=ActionType.NOTE, note="A4")
+        channel_map = {"freak": 2}
+        msg_type, channel, data1, data2, data3 = action_to_midi(action, channel_map)
+
+        assert data1 == 69   # A4
+        assert data2 == 100  # default velocity

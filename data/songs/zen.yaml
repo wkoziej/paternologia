@@ -2,7 +2,7 @@ song:
   id: zen
   name: Zen
   author: Wojtas
-  created: '2026-01-18'
+  created: '2026-01-25'
   notes: tempo 117 :)
   pacer_export:
     target_preset: A3
@@ -18,7 +18,7 @@ pacer:
     bank_msb: 0
   - device: freak
     type: preset
-    value: 67
+    value: 66
     cc: null
     label: Zen
     bank_lsb: 0
@@ -75,13 +75,13 @@ pacer:
     type: preset
     value: 7
     cc: null
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0
   - device: ms
     type: pattern
     value: '7'
     cc: null
-    label: null
+    label: None
     bank_lsb: 0
     bank_msb: 0

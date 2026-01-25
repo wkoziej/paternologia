@@ -103,8 +103,10 @@ class TestExportWithButtons:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Verify MSG_SW_PRG_STEP (0x46) appears multiple times
-        assert syx.count(bytes([c.MSG_SW_PRG_STEP])) >= 3
+        # PRESET uses MSG_SW_PRG_BANK, PATTERN uses MSG_SW_PRG_STEP
+        # 2 PRESET actions + 1 PATTERN action
+        assert syx.count(bytes([c.MSG_SW_PRG_BANK])) >= 2
+        assert syx.count(bytes([c.MSG_SW_PRG_STEP])) >= 1
 
 
 class TestExportEmptySteps:
@@ -145,14 +147,14 @@ class TestExportEmptySteps:
         )
         syx = export_song_to_syx(song, devices, "A1")
 
-        # Button 1 has 2 actions with MSG_SW_PRG_STEP (0x46)
-        # Count MSG_SW_PRG_STEP patterns
-        total_prg_step = 0
+        # Button 1 has 2 PRESET actions with MSG_SW_PRG_BANK (0x45)
+        # Count MSG_SW_PRG_BANK patterns in msg_type element position
+        total_prg_bank = 0
         for step in range(1, 7):
             msg_type_elm = (step - 1) * 6 + 2
-            pattern = bytes([msg_type_elm, 0x01, c.MSG_SW_PRG_STEP])
-            total_prg_step += syx.count(pattern)
-        assert total_prg_step == 2  # 2 active steps
+            pattern = bytes([msg_type_elm, 0x01, c.MSG_SW_PRG_BANK])
+            total_prg_bank += syx.count(pattern)
+        assert total_prg_bank == 2  # 2 active steps with PRESET
 
 
 class TestExportSysExFormat:

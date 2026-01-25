@@ -28,6 +28,7 @@ MSG_SW_PRG_STEP = 0x46    # Program Step: data1=unused, data2=start, data3=end (
 MSG_SW_MIDI_CC = 0x40     # CC Trigger dla stompswitch: data1=controller, data2=down, data3=up
 MSG_SW_MIDI_CC_TGGLE = 0x47  # CC Toggle dla stompswitch: data1=controller, data2=value1, data3=value2
 MSG_SW_MIDI_CC_STEP = 0x48   # CC Step dla stompswitch: data1=controller, data2=start, data3=end
+MSG_SW_NOTE = 0x43        # Note: data1=note, data2=velocity, data3=unused
 # MSG_AD_MIDI_CC = 0x00 - NIE UŻYWAĆ dla stompswitch! To jest dla Expression Pedals
 
 # LED colors (from pacer-editor dump_format.md)

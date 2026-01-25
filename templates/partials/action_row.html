@@ -31,7 +31,7 @@
                 {% if device.id == action.device %}
                     {% for atype in device.action_types %}
                     <option value="{{ atype.value }}" {% if action.type.value == atype.value %}selected{% endif %}>
-                        {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' }}
+                        {{ 'Preset' if atype.value == 'preset' else 'Pattern' if atype.value == 'pattern' else 'CC' if atype.value == 'cc' else 'Note' }}
                     </option>
                     {% endfor %}
                 {% endif %}
