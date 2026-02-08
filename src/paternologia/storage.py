@@ -16,6 +16,7 @@ class Storage:
         self.devices_file = self.data_dir / "devices.yaml"
         self.songs_dir = self.data_dir / "songs"
         self.pacer_config_file = self.data_dir / "pacer.yaml"
+        self.songs_order_file = self.data_dir / "songs_order.yaml"
 
     def _ensure_dirs(self) -> None:
         """Ensure data directories exist."""
@@ -50,18 +51,51 @@ class Storage:
         with open(self.devices_file, "w", encoding="utf-8") as f:
             yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
+    def get_songs_order(self) -> list[str]:
+        """Load song IDs order from songs_order.yaml."""
+        if not self.songs_order_file.exists():
+            return []
+
+        with open(self.songs_order_file, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        if not data or not isinstance(data, list):
+            return []
+
+        return data
+
+    def save_songs_order(self, order: list[str]) -> None:
+        """Save song IDs order to songs_order.yaml."""
+        self._ensure_dirs()
+
+        with open(self.songs_order_file, "w", encoding="utf-8") as f:
+            yaml.dump(order, f, default_flow_style=False, allow_unicode=True)
+
     def get_songs(self) -> list[Song]:
-        """Load all songs from songs/ directory."""
+        """Load all songs from songs/ directory, respecting order from songs_order.yaml."""
         if not self.songs_dir.exists():
             return []
 
-        songs = []
-        for song_file in sorted(self.songs_dir.glob("*.yaml")):
+        songs_by_id: dict[str, Song] = {}
+        for song_file in self.songs_dir.glob("*.yaml"):
             song = self._load_song_file(song_file)
             if song:
-                songs.append(song)
+                songs_by_id[song.song.id] = song
 
-        return songs
+        order = self.get_songs_order()
+        ordered_songs: list[Song] = []
+        seen_ids: set[str] = set()
+
+        for song_id in order:
+            if song_id in songs_by_id:
+                ordered_songs.append(songs_by_id[song_id])
+                seen_ids.add(song_id)
+
+        remaining_ids = sorted(set(songs_by_id.keys()) - seen_ids)
+        for song_id in remaining_ids:
+            ordered_songs.append(songs_by_id[song_id])
+
+        return ordered_songs
 
     def get_song(self, song_id: str) -> Song | None:
         """Load a single song by ID."""

@@ -1,0 +1,38 @@
+song:
+  id: zima
+  name: Zima
+  author: ''
+  created: '2026-01-31'
+  notes: ''
+  pacer_export:
+    target_preset: A4
+pacer:
+- name: presety i nabij beat
+  actions:
+  - device: boss
+    type: preset
+    value: 3
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: d01
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 67
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

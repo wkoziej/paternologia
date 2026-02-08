@@ -504,6 +504,52 @@ class TestPacerSendEndpoint:
                 assert "amidi failed" in response.json()["detail"]
 
 
+class TestSongsOrderEndpoint:
+    """Tests for PUT /api/songs/order endpoint."""
+
+    def test_update_songs_order(self, client, sample_devices, test_storage):
+        """Update songs order via PUT."""
+        from paternologia.models import Song, SongMetadata
+
+        test_storage.save_song(Song(song=SongMetadata(id="alpha", name="Alpha")))
+        test_storage.save_song(Song(song=SongMetadata(id="beta", name="Beta")))
+        test_storage.save_song(Song(song=SongMetadata(id="gamma", name="Gamma")))
+
+        response = client.put(
+            "/api/songs/order",
+            json=["gamma", "alpha", "beta"],
+        )
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+        order = test_storage.get_songs_order()
+        assert order == ["gamma", "alpha", "beta"]
+
+    def test_update_songs_order_empty(self, client, sample_devices, test_storage):
+        """Clear songs order via PUT with empty list."""
+        test_storage.save_songs_order(["a", "b", "c"])
+
+        response = client.put("/api/songs/order", json=[])
+        assert response.status_code == 200
+
+        order = test_storage.get_songs_order()
+        assert order == []
+
+    def test_get_songs_order(self, client, sample_devices, test_storage):
+        """GET /api/songs/order returns current order."""
+        test_storage.save_songs_order(["c", "a", "b"])
+
+        response = client.get("/api/songs/order")
+        assert response.status_code == 200
+        assert response.json() == ["c", "a", "b"]
+
+    def test_get_songs_order_empty(self, client, sample_devices, test_storage):
+        """GET /api/songs/order returns empty list when no order set."""
+        response = client.get("/api/songs/order")
+        assert response.status_code == 200
+        assert response.json() == []
+
+
 class TestHTMXPartials:
     """Tests for HTMX partial endpoints."""
 

@@ -2,34 +2,40 @@ song:
   id: wnetrz
   name: Wnętrze
   author: Wojtas
-  created: '2026-01-25'
+  created: '2026-01-27'
   notes: AC
   pacer_export:
     target_preset: A2
 pacer:
-- name: '...'
+- name: ustaw presety i nagraj gitarę (1,2,3)
   actions:
   - device: boss
     type: preset
     value: 1
     cc: null
-    label: Wnętrze
+    label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: freak
     type: preset
     value: 65
     cc: null
-    label: Wnętrze
+    label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: ms
     type: pattern
     value: B01
     cc: null
-    label: Gramy melodię na MicroFreak
+    label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: boss
     type: cc
     value: 127
@@ -37,7 +43,9 @@ pacer:
     label: Track 1 Rec/Play
     bank_lsb: 0
     bank_msb: 0
-- name: Drum b2 i efekt na IN
+    note: null
+    velocity: null
+- name: zmień perkusję i nagraj bas
   actions:
   - device: ms
     type: pattern
@@ -46,26 +54,54 @@ pacer:
     label: None
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
   - device: boss
     type: cc
-    value: 1
+    value: 127
     cc: 2
-    label: In FX A
+    label: null
     bank_lsb: 0
     bank_msb: 0
-- name: efekt na ścieżce i perkusja B3
+    note: null
+    velocity: null
+- name: efekty
   actions:
   - device: boss
     type: cc
-    value: 1
-    cc: 3
-    label: None
+    value: 127
+    cc: 11
+    label: track1
     bank_lsb: 0
     bank_msb: 0
-  - device: ms
-    type: pattern
-    value: b03
-    cc: null
-    label: None
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 12
+    label: track2
     bank_lsb: 0
     bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 127
+    cc: 4
+    label: perkusja
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: perc
+  actions:
+  - device: boss
+    type: cc
+    value: 127
+    cc: 5
+    label: śpiesz
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null

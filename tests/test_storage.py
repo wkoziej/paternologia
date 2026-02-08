@@ -192,6 +192,68 @@ class TestSongStorage:
         assert ids == ["alpha", "beta", "zebra"]
 
 
+class TestSongsOrder:
+    """Tests for songs ordering via songs_order.yaml."""
+
+    def test_get_songs_order_empty_when_no_file(self, temp_storage):
+        """Returns empty list when songs_order.yaml doesn't exist."""
+        order = temp_storage.get_songs_order()
+        assert order == []
+
+    def test_save_and_get_songs_order(self, temp_storage):
+        """Songs order can be saved and loaded."""
+        order = ["song-c", "song-a", "song-b"]
+        temp_storage.save_songs_order(order)
+
+        loaded = temp_storage.get_songs_order()
+        assert loaded == ["song-c", "song-a", "song-b"]
+
+    def test_songs_order_file_location(self, temp_storage):
+        """Songs order is saved to data/songs_order.yaml."""
+        temp_storage.save_songs_order(["test"])
+        order_file = temp_storage.data_dir / "songs_order.yaml"
+        assert order_file.exists()
+
+    def test_get_songs_respects_order(self, temp_storage):
+        """get_songs() returns songs in order from songs_order.yaml."""
+        temp_storage.save_song(Song(song=SongMetadata(id="zebra", name="Zebra")))
+        temp_storage.save_song(Song(song=SongMetadata(id="alpha", name="Alpha")))
+        temp_storage.save_song(Song(song=SongMetadata(id="beta", name="Beta")))
+        temp_storage.save_songs_order(["beta", "zebra", "alpha"])
+
+        songs = temp_storage.get_songs()
+        ids = [s.song.id for s in songs]
+        assert ids == ["beta", "zebra", "alpha"]
+
+    def test_get_songs_appends_unordered_songs_at_end(self, temp_storage):
+        """Songs not in order file are appended at the end alphabetically."""
+        temp_storage.save_song(Song(song=SongMetadata(id="zebra", name="Zebra")))
+        temp_storage.save_song(Song(song=SongMetadata(id="alpha", name="Alpha")))
+        temp_storage.save_song(Song(song=SongMetadata(id="beta", name="Beta")))
+        temp_storage.save_songs_order(["beta"])
+
+        songs = temp_storage.get_songs()
+        ids = [s.song.id for s in songs]
+        assert ids == ["beta", "alpha", "zebra"]
+
+    def test_get_songs_ignores_missing_ids_in_order(self, temp_storage):
+        """Order file can contain IDs of deleted songs - they're ignored."""
+        temp_storage.save_song(Song(song=SongMetadata(id="alpha", name="Alpha")))
+        temp_storage.save_songs_order(["deleted", "alpha", "also-deleted"])
+
+        songs = temp_storage.get_songs()
+        ids = [s.song.id for s in songs]
+        assert ids == ["alpha"]
+
+    def test_update_songs_order(self, temp_storage):
+        """Songs order can be updated (replaced)."""
+        temp_storage.save_songs_order(["a", "b", "c"])
+        temp_storage.save_songs_order(["c", "b", "a"])
+
+        loaded = temp_storage.get_songs_order()
+        assert loaded == ["c", "b", "a"]
+
+
 class TestStorageDirectoryCreation:
     """Tests for automatic directory creation."""
 

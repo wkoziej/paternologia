@@ -156,6 +156,21 @@ async def delete_song(song_id: str):
     return RedirectResponse(url="/", status_code=303)
 
 
+@router.get("/api/songs/order")
+async def get_songs_order():
+    """Get current songs order."""
+    storage = get_storage()
+    return storage.get_songs_order()
+
+
+@router.put("/api/songs/order")
+async def update_songs_order(order: list[str]):
+    """Update songs order for drag & drop reordering."""
+    storage = get_storage()
+    storage.save_songs_order(order)
+    return {"status": "ok"}
+
+
 def _build_song_from_form(
     form_data,
     song_id: str,

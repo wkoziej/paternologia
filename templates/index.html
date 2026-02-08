@@ -12,7 +12,7 @@
 </div>
 
 {% if songs %}
-<div class="space-y-4">
+<div id="songs-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for song in songs %}
     {% include "partials/song_card.html" %}
     {% endfor %}
@@ -26,4 +26,27 @@
     </a>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('songs-grid');
+    if (grid) {
+        Sortable.create(grid, {
+            animation: 150,
+            ghostClass: 'opacity-50',
+            onEnd: function() {
+                const order = Array.from(grid.querySelectorAll('[data-song-id]'))
+                    .map(el => el.dataset.songId);
+                fetch('/api/songs/order', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(order)
+                });
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
