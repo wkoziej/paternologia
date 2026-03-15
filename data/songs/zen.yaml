@@ -2,7 +2,7 @@ song:
   id: zen
   name: Zen
   author: Wojtas
-  created: '2026-02-08'
+  created: '2026-03-07'
   notes: tempo 117 :)
   pacer_export:
     target_preset: A3
@@ -60,7 +60,47 @@ pacer:
     type: cc
     value: 1
     cc: 1
-    label: zakoncz nagrywanie track1
+    label: nagraj gitarę (track2)
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zmień drum i ZACZNIJ  nagrywanie
+  actions:
+  - device: ms
+    type: pattern
+    value: C03
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: Zmień drum i zakoncz nagrywanie
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: C04
+    cc: null
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null

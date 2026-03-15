@@ -1,6 +1,7 @@
 # ABOUTME: Songs API router for Paternologia.
 # ABOUTME: Provides CRUD endpoints for song configurations with HTMX support.
 
+import logging
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
@@ -17,7 +18,25 @@ from paternologia.models import (
     SongMetadata,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["songs"])
+
+
+def _rebuild_midi_index(request: Request) -> None:
+    """Rebuild MIDI index after song changes (if MIDI subsystem is active)."""
+    midi_index = getattr(request.app.state, "midi_index", None)
+    listener = getattr(request.app.state, "midi_listener", None)
+    if midi_index is None:
+        return
+
+    from paternologia.midi.index import SongMidiIndex
+    storage = get_storage()
+    new_index = SongMidiIndex.build(storage.get_songs(), storage.get_devices())
+    request.app.state.midi_index = new_index
+    if listener is not None:
+        listener.song_index = new_index
+    logger.info("MIDI index rebuilt")
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -110,6 +129,7 @@ async def create_song(request: Request):
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=_format_validation_error(exc))
     storage.save_song(song)
+    _rebuild_midi_index(request)
 
     return RedirectResponse(url=f"/songs/{song_id}", status_code=303)
 
@@ -135,6 +155,7 @@ async def update_song(request: Request, song_id: str):
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=_format_validation_error(exc))
     storage.save_song(song)
+    _rebuild_midi_index(request)
 
     return RedirectResponse(url=f"/songs/{song_id}", status_code=303)
 
@@ -146,13 +167,14 @@ async def update_song_post(request: Request, song_id: str):
 
 
 @router.delete("/songs/{song_id}")
-async def delete_song(song_id: str):
+async def delete_song(request: Request, song_id: str):
     """Delete a song."""
     storage = get_storage()
 
     if not storage.delete_song(song_id):
         raise HTTPException(status_code=404, detail="Song not found")
 
+    _rebuild_midi_index(request)
     return RedirectResponse(url="/", status_code=303)
 
 

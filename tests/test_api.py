@@ -348,7 +348,7 @@ class TestPacerSendEndpoint:
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             with patch("subprocess.run", return_value=mock_result) as mock_run:
                 response = client.post("/pacer/send/test")
 
@@ -379,7 +379,7 @@ class TestPacerSendEndpoint:
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             with patch("subprocess.run", return_value=mock_result):
                 response = client.post("/pacer/send/test", data={"preset": "B3"})
 
@@ -407,7 +407,7 @@ class TestPacerSendEndpoint:
         mock_result.returncode = 0
         mock_result.stderr = ""
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             with patch("subprocess.run", return_value=mock_result):
                 response = client.post("/pacer/send/test")
 
@@ -444,7 +444,7 @@ class TestPacerSendEndpoint:
         config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             response = client.post("/pacer/send/test", data={"preset": "E1"})
             assert response.status_code == 400
             assert "Invalid preset" in response.json()["detail"]
@@ -459,7 +459,7 @@ class TestPacerSendEndpoint:
         config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value=None):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value=None):
             response = client.post("/pacer/send/test")
 
             assert response.status_code == 400
@@ -475,7 +475,7 @@ class TestPacerSendEndpoint:
         config = PacerConfig(device_name="PACER")
         test_storage.save_pacer_config(config)
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             with patch("subprocess.run", side_effect=FileNotFoundError):
                 response = client.post("/pacer/send/test")
 
@@ -496,7 +496,7 @@ class TestPacerSendEndpoint:
         mock_result.returncode = 1
         mock_result.stderr = "Device not found"
 
-        with patch("paternologia.routers.pacer.find_midi_port", return_value="hw:8,0,0"):
+        with patch("paternologia.routers.pacer.find_amidi_port", return_value="hw:8,0,0"):
             with patch("subprocess.run", return_value=mock_result):
                 response = client.post("/pacer/send/test")
 

@@ -1,14 +1,15 @@
 # ABOUTME: FastAPI router for Pacer SysEx export and send endpoints.
 # ABOUTME: Provides GET /pacer/export/{song_id}.syx and POST /pacer/send/{song_id}.
 
-import subprocess
 import logging
+import subprocess
 from tempfile import NamedTemporaryFile
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from fastapi.responses import Response, HTMLResponse
 
 from ..dependencies import get_storage
+from ..midi.ports import find_amidi_port
 from ..models import VALID_PRESETS
 from ..storage import Storage
 from ..pacer.export import export_song_to_syx
@@ -17,37 +18,6 @@ from ..pacer import constants as c
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pacer", tags=["pacer"])
-
-
-def find_midi_port(device_name: str) -> str | None:
-    """Znajdź port amidi po nazwie urządzenia.
-
-    Args:
-        device_name: Fragment nazwy urządzenia (np. "PACER")
-
-    Returns:
-        Port w formacie hw:X,Y,Z lub None jeśli nie znaleziono
-    """
-    try:
-        result = subprocess.run(
-            ["amidi", "-l"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        if result.returncode != 0:
-            return None
-
-        for line in result.stdout.strip().split("\n"):
-            if device_name.upper() in line.upper():
-                # Format: "IO  hw:4,0,0  PACER MIDI1"
-                parts = line.split()
-                if len(parts) >= 2 and parts[1].startswith("hw:"):
-                    return parts[1]
-        return None
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return None
 
 
 @router.get("/export/{song_id}.syx")
@@ -120,7 +90,7 @@ def send_to_pacer(
             raise HTTPException(400, error_msg)
 
         # Auto-detekcja portu po nazwie urządzenia
-        port = find_midi_port(pacer_config.device_name)
+        port = find_amidi_port(pacer_config.device_name)
         if not port:
             error_msg = (
                 f"Nie znaleziono urządzenia '{pacer_config.device_name}'. "

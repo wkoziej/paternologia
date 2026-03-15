@@ -2,10 +2,10 @@ song:
   id: slimak
   name: Ślimak
   author: ''
-  created: '2026-01-26'
+  created: '2026-03-07'
   notes: ''
   pacer_export:
-    target_preset: A6
+    target_preset: A4
 pacer:
 - name: presety i nabij beat
   actions:
@@ -20,7 +20,7 @@ pacer:
     velocity: null
   - device: ms
     type: pattern
-    value: e8
+    value: e9
     cc: null
     label: None
     bank_lsb: 0
@@ -45,27 +45,7 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
-- name: nagrywaj bass (2 x guzior 2)
-  actions:
-  - device: boss
-    type: cc
-    value: 1
-    cc: 1
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-  - device: ms
-    type: pattern
-    value: e9
-    cc: null
-    label: None
-    bank_lsb: 0
-    bank_msb: 0
-    note: null
-    velocity: null
-- name: skoczniej i przewrzuć się na gitarę
+- name: zakoncz nagrywanie basu
   actions:
   - device: ms
     type: pattern
@@ -85,13 +65,60 @@ pacer:
     bank_msb: 0
     note: null
     velocity: null
-- name: zwalniaj
+  - device: boss
+    type: cc
+    value: 1
+    cc: 1
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: nagraj gitare
   actions:
   - device: ms
     type: pattern
-    value: e9
+    value: e11
     cc: null
     label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: track2
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: freak
+    type: preset
+    value: 1
+    cc: null
+    label: None
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+- name: zakoncz nagrywanie gitary
+  actions:
+  - device: boss
+    type: cc
+    value: 1
+    cc: 2
+    label: null
+    bank_lsb: 0
+    bank_msb: 0
+    note: null
+    velocity: null
+  - device: ms
+    type: pattern
+    value: e12
+    cc: null
+    label: null
     bank_lsb: 0
     bank_msb: 0
     note: null

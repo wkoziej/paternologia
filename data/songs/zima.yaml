@@ -2,10 +2,10 @@ song:
   id: zima
   name: Zima
   author: ''
-  created: '2026-01-31'
+  created: '2026-03-07'
   notes: ''
   pacer_export:
-    target_preset: A4
+    target_preset: A5
 pacer:
 - name: presety i nabij beat
   actions:
