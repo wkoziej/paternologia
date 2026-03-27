@@ -7,7 +7,7 @@
 
 CLI (`uv run paternologia <command>`) jako moduł wewnątrz pakietu Paternologia, umożliwiające:
 
-1. **Programowanie RC-600** — generowanie plików konfiguracyjnych XML (MEMORY.RC0) z definicji YAML i transfer na urządzenie przez USB Storage
+1. **Programowanie RC-600** — generowanie plików konfiguracyjnych RC0 (pseudo-XML) z definicji YAML i transfer na urządzenie przez USB Storage
 2. **Sterowanie runtime MIDI** — wysyłanie Program Change (przełączanie memory) i CC do RC-600 w czasie rzeczywistym
 
 Poza scope pierwszej wersji: Pacer CLI (eksport/wysyłanie SysEx) — Pacer działa już przez web i nie jest pain pointem. Można dodać później.
@@ -18,10 +18,31 @@ Poza scope pierwszej wersji: Pacer CLI (eksport/wysyłanie SysEx) — Pacer dzia
 Wojciech konfiguruje RC-600 (efekty, assigny, parametry) ręcznie przez menu urządzenia przed każdą piosenką. Ma ~3-5 bazowych szablonów konfiguracji, które modyfikuje per piosenka. To jest czasochłonne i podatne na błędy.
 
 ### Odkrycia z researchu
-- **RC-600 nie wspiera SysEx** do programowania — konfiguracja odbywa się przez pliki XML (MEMORY.RC0) na USB Storage
-- Istnieje projekt open-source `shaenzi/boss_rc600` (Python) do manipulacji plikami XML RC-600
+- **RC-600 nie wspiera SysEx** do programowania — konfiguracja odbywa się przez pliki RC0 na USB Storage
+- **Pliki RC0 to pseudo-XML** — nie valid XML (nazwy tagów zaczynają się od cyfr, np. `<0>100</0>`), wymaga parsowania text-based zamiast standardowego XML parsera
 - RC-600 wspiera MIDI Program Change (przełączanie 99 memory) i CC Assign (sterowanie funkcjami)
 - Pacer ma już pełną implementację SysEx w Paternologii
+
+### Referencyjne projekty open-source
+
+#### shaenzi/boss_rc600
+- **URL:** https://github.com/shaenzi/boss_rc600
+- **Licencja:** MIT
+- **Język:** Python 3.10 (Jupyter Notebook)
+- **Co robi:** Manipulacja ustawieniami RC-600 na poziomie plików RC0 (text-based parsing, linia po linii)
+- **Pliki:** Dwa typy — `*A.RC0` i `*B.RC0` (np. MEMORY001A.RC0, MEMORY001B.RC0)
+- **Ograniczenia:** Projekt niekompletny — autor zanotował, że looper nie rozpoznaje zmian. Może brakować aktualizacji checksum/counter lub innego mechanizmu walidacji.
+- **Zależności:** jupyter, lxml (zainstalowany, ale nieużywany — walidacja XML failuje)
+- **Status:** Ostatnia aktualizacja 2022-05, 26 KB, proof-of-concept
+
+#### Inne projekty (RC-500, kompatybilny format)
+- **dfleury2/boss-rc500-editor** (C/C++) — GUI editor dla RC-500, parsuje XML z MEMORY.RC0
+- **tom1lee/rc500-reader** (C++) — czyta MEMORY1.RC0, tworzy JSON, może zapisywać przez szablony Inja
+- **rc600editor.com** — płatny, zamknięty edytor z pełną obsługą RC-600 (drag-and-drop memory, WAV studio, set listy). Windows 10+ / macOS 12+.
+
+#### Narzędzia do innych urządzeń
+- **dagargo/elektroid** (C, GPLv3) — CLI + GUI do Model:Samples, Digitakt, MicroFreak i innych. `elektroid-cli` nadaje się do skryptowania.
+- **francoisgeorgy/microfreak-reader** (JS) — odczyt presetów MicroFreak przez SysEx (tylko read, zapis nieobsługiwany)
 
 ### Wybór architektury: moduł wewnątrz Paternologii
 - Współdzielone modele Pydantic, storage YAML, infrastruktura MIDI (python-rtmidi) — zero duplikacji (DRY)
@@ -89,7 +110,7 @@ paternologia rc600 send-cc <cc> <value> # wyślij CC
 
 ## Open Questions
 
-1. **Format XML RC-600 (blocker)** — trzeba zbadać dokładną strukturę plików MEMORY.RC0 zanim będzie można zaprojektować format YAML. Krok: zrobić backup RC-600 przez USB, przeanalizować XML, porównać z `shaenzi/boss_rc600`. Bez tego nie da się sensownie planować.
+1. **Format RC0 (blocker)** — pliki RC0 to pseudo-XML (nie valid XML). Projekt `shaenzi/boss_rc600` nie rozwiązał problemu zapisu (looper nie rozpoznaje zmian). Krok: zrobić backup RC-600, przeanalizować strukturę RC0, porównać z projektami `boss-rc500-editor` i `rc500-reader` (RC-500 ma kompatybilny format). Sprawdzić czy jest mechanizm checksum/counter walidujący plik. Bez tego nie da się sensownie planować.
 2. **Walidacja konfiguracji** — jak walidować wartości parametrów efektów? Prawdopodobnie wyniknie z analizy XML (zakresy wartości powinny być widoczne w strukturze danych).
 3. **Framework CLI** — `typer`, `click`, czy wbudowany `argparse`? Decyzja na etapie planowania.
 
